@@ -325,7 +325,7 @@ import {
                         <div class="hour-bar">
                           <span [style.height.%]="hourHeight(row.events)"></span>
                         </div>
-                        <span class="small subtle">{{ row.hour }}</span>
+                        <span class="small subtle">{{ hourLabel(row.hour) }}</span>
                       </li>
                     }
                   </ul>
@@ -340,7 +340,7 @@ import {
                   <ul class="ranked small">
                     @for (row of extra.bestPerformingOffers; track row.listingId) {
                       <li>
-                        <span>{{ row.listingType }} #{{ row.listingId }}</span>
+                        <span>{{ row.title ?? listingLabel(row) }}</span>
                         <span class="strong">
                           {{ row.redemptions | number }} redeemed
                           <span class="subtle">· {{ row.views | number }} views</span>
@@ -624,6 +624,22 @@ export class VisibilityDashboardComponent {
   funnelWidth(value: number): number {
     const top = this.dashboard()?.funnel.stages[0]?.value ?? 0;
     return top > 0 ? (value / top) * 100 : 0;
+  }
+
+  /**
+   * A readable clock label. A bare "12" is ambiguous between noon and midnight,
+   * and a merchant reading "when they were looking" needs to know which.
+   */
+  hourLabel(hour: number): string {
+    if (hour === 0) return '12am';
+    if (hour === 12) return '12pm';
+    return hour < 12 ? `${hour}am` : `${hour - 12}pm`;
+  }
+
+  /** Fallback when a listing has since been deleted and has no title left. */
+  listingLabel(row: { listingType: string; listingId: number }): string {
+    const kind = row.listingType === 'service_offer' ? 'Service offer' : 'Offer';
+    return `${kind} #${row.listingId} (removed)`;
   }
 
   hourHeight(events: number): number {

@@ -2562,6 +2562,8 @@ export interface VisibilityPremiumInsights {
   bestPerformingOffers: {
     listingType: VisibilityListingType;
     listingId: number;
+    /** Resolved server-side; null when the listing has since been deleted. */
+    title: string | null;
     impressions: number;
     views: number;
     saves: number;

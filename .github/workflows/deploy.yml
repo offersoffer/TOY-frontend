@@ -1,0 +1,61 @@
+# Push to main -> the built Angular app on the EC2 box is replaced.
+#
+# The build runs here rather than on the server, for the same reason
+# deploy-frontend.sh builds on your Mac: the box is a 2 GB t4g.small and an
+# Angular production build is the most memory-hungry thing in this project.
+# The runner builds it and only the finished dist/ crosses the wire.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Angular 20 needs >= 20.19; this matches what deploy-frontend.sh
+          # selects via nvm when building on a Mac.
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # No separate test job: there are no frontend tests yet, and the build
+      # itself is the real gate - it type-checks every template, which is what
+      # catches things `tsc` alone does not.
+      - name: Build
+        run: npx ng build --configuration production
+
+      - name: Authorise the deploy key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Pin the host key rather than disabling the check: this is a fixed
+          # Elastic IP, so there is a real fingerprint to trust.
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # --delete clears out old builds; the hashed chunk names change on every
+      # build, so without it /var/www fills with orphaned bundles.
+      - name: Upload
+        run: |
+          rsync -az --delete \
+            dist/TOY-frontend/browser/ \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/offersoffer/"
+
+      - name: Check the site answers
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://offersoffer.in/)
+          echo "https://offersoffer.in/ -> $code"
+          [ "$code" = "200" ]

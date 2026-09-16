@@ -1,0 +1,37 @@
+# https://offersoffer.in/robots.txt
+#
+# Served straight out of the Angular build (public/ is copied to the web root),
+# so it survives every deploy without a server change.
+#
+# The rule of thumb below: anything a signed-out visitor can usefully read is
+# crawlable, and everything that only makes sense while signed in is not.
+# Disallow is a crawling instruction, not an indexing one - the account pages
+# also send `noindex` from SeoService.account(), which is the half that
+# actually keeps them out of results.
+
+User-agent: *
+
+# Account and merchant areas. Nothing here renders without a session, so a
+# crawler spends its budget on login redirects and indexes nothing.
+Disallow: /auth/
+Disallow: /admin
+Disallow: /favorites
+Disallow: /following
+Disallow: /claims
+Disallow: /service-claims
+Disallow: /notifications
+Disallow: /profile
+Disallow: /support/requests
+
+# The JSON API. Crawling it finds no pages and costs rate limit.
+Disallow: /api/
+
+# Filter, sort and pagination state. The pages themselves are canonicalised to
+# their unfiltered address, but there is no reason to have a crawler walk
+# thousands of combinations to discover that.
+Disallow: /*?*page=
+Disallow: /*?*sort=
+
+Allow: /
+
+Sitemap: https://offersoffer.in/sitemap.xml

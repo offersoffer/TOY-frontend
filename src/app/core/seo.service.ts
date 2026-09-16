@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 
 import { Category, Offer, Service, Shop } from './models';
+import { StructuredDataService } from './structured-data.service';
 
 /**
  * Public discovery metadata (Guest Browsing §27).
@@ -44,12 +45,17 @@ export class SeoService {
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
   private readonly document = inject(DOCUMENT);
+  private readonly structured = inject(StructuredDataService);
 
   apply(page: PageMeta): void {
     const fullTitle = page.title.endsWith(SITE_NAME) ? page.title : `${page.title}${SUFFIX}`;
     const url = this.absolute(page.path);
 
     this.title.setTitle(fullTitle);
+    // Before anything else: the page being described is not the page whose
+    // structured data is currently in the head. An entity builder below puts
+    // its own back straight after.
+    this.structured.clear();
     this.set('description', page.description);
     this.set('robots', page.noindex ? 'noindex, nofollow' : 'index, follow');
 
@@ -86,6 +92,7 @@ export class SeoService {
       image: offer.imageUrl ?? null,
       type: 'product',
     });
+    this.structured.offer(offer);
   }
 
   service(service: Service): void {
@@ -100,6 +107,7 @@ export class SeoService {
       image: service.imageUrl ?? null,
       type: 'product',
     });
+    this.structured.service(service);
   }
 
   shop(shop: Shop): void {
@@ -113,6 +121,7 @@ export class SeoService {
       path: `/shops/${shop.slug ?? shop.id}`,
       image: shop.logoUrl ?? null,
     });
+    this.structured.shop(shop);
   }
 
   /**
@@ -148,6 +157,7 @@ export class SeoService {
    * `noindex`.
    */
   indexable(path?: string): void {
+    this.structured.clear();
     this.set('robots', 'index, follow');
     this.setCanonical(this.absolute(path));
   }

@@ -8,6 +8,7 @@ import { LocationService, SUGGESTED_CITIES } from './core/location.service';
 import { ThemeService, ThemePreference } from './core/theme.service';
 import { AuthPromptService } from './core/auth-prompt.service';
 import { SeoService } from './core/seo.service';
+import { StructuredDataService } from './core/structured-data.service';
 import { AuthPromptComponent } from './shared/auth-prompt.component';
 import { IconComponent } from './shared/icon.component';
 import { OfflineBannerComponent } from './shared/state.components';
@@ -52,6 +53,7 @@ export class App {
   readonly theme = inject(ThemeService);
   private readonly prompt = inject(AuthPromptService);
   private readonly seo = inject(SeoService);
+  private readonly structured = inject(StructuredDataService);
   private readonly router = inject(Router);
 
   readonly cities = SUGGESTED_CITIES;
@@ -74,6 +76,10 @@ export class App {
   });
 
   constructor() {
+    // Who the site is and how to search it. Written once and never cleared -
+    // unlike the per-page markup, this is true on every address.
+    this.structured.site();
+
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event) => {
       const url = (event as NavigationEnd).urlAfterRedirects;
       this.isAdminArea.set(url.startsWith('/admin'));

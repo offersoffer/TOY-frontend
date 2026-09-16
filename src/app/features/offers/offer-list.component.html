@@ -40,12 +40,151 @@
         aria-label="Search offers"
       />
     </div>
-    <button type="button" class="btn btn-secondary filter-toggle" (click)="filtersOpen.set(!filtersOpen())">
+    <button
+      type="button"
+      class="btn btn-secondary filter-toggle"
+      aria-controls="offer-filters"
+      [attr.aria-expanded]="filtersOpen()"
+      (click)="filtersOpen.set(!filtersOpen())"
+    >
       Filters
       @if (activeFilterCount() > 0) {
         <span class="count">{{ activeFilterCount() }}</span>
       }
     </button>
+  </div>
+
+  <!-- Detailed filters (§9) -->
+  <div class="card filter-panel" id="offer-filters" [class.collapsed]="!filtersOpen()">
+    <div class="card-body">
+      <!--
+        Category (§6). Chips rather than a <select>, because the count is half
+        the information - "Clothing 12" tells you where the offers actually are,
+        and a dropdown cannot say that. Each one is also the address of a real
+        category page (§27), which is why they are links.
+      -->
+      <div class="field field-wide">
+        <span class="label-text">Category</span>
+        <div class="category-cloud" [class.expanded]="categoriesExpanded()">
+          <a
+            class="chip"
+            [class.active]="categoryId === null"
+            routerLink="/offers"
+            [queryParams]="chipParams()"
+            (click)="filtersOpen.set(false)"
+          >
+            All categories
+          </a>
+          @for (category of orderedCategories(); track category.id; let i = $index) {
+            <!--
+              Folded chips are hidden in CSS rather than dropped: each is the
+              only link some category page gets from this page, and a link the
+              crawler never sees is a category page back to being an orphan.
+              Same reason the panel itself is no longer behind an @if.
+            -->
+            <a
+              class="chip"
+              [class.active]="categoryId === category.id"
+              [class.folded]="i >= chipLimit"
+              [routerLink]="chipLink(category)"
+              [queryParams]="chipParams()"
+              (click)="filtersOpen.set(false)"
+            >
+              {{ category.name }}
+              @if (category.offerCount) {
+                <span class="chip-count">{{ category.offerCount }}</span>
+              }
+            </a>
+          }
+          @if (foldedCategoryCount()) {
+            <button
+              type="button"
+              class="chip chip-more"
+              [attr.aria-expanded]="categoriesExpanded()"
+              (click)="categoriesExpanded.set(!categoriesExpanded())"
+            >
+              @if (categoriesExpanded()) {
+                Show fewer
+              } @else {
+                {{ foldedCategoryCount() }} more
+              }
+              <app-icon class="more-caret" name="chevron-down-outline" [size]="13" />
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-shop">Shop</label>
+          <select id="f-shop" [(ngModel)]="shopId">
+            <option [ngValue]="null">Any shop</option>
+            @for (shop of shops(); track shop.id) {
+              <option [ngValue]="shop.id">{{ shop.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="f-city">City</label>
+          <input id="f-city" type="text" list="city-list" [(ngModel)]="city" placeholder="e.g. Coimbatore" />
+          <datalist id="city-list">
+            @for (option of cities; track option.city) {
+              <option [value]="option.city"></option>
+            }
+          </datalist>
+        </div>
+
+        <div class="field">
+          <label for="f-pincode">Pincode</label>
+          <input id="f-pincode" type="text" [(ngModel)]="pincode" placeholder="e.g. 641004" />
+        </div>
+
+        <div class="field">
+          <label for="f-type">Offer type</label>
+          <select id="f-type" [(ngModel)]="offerType">
+            <option value="">Any type</option>
+            @for (type of offerTypes; track type.value) {
+              <option [value]="type.value">{{ type.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="f-discount">Minimum discount (%)</label>
+          <input id="f-discount" type="number" min="0" max="100" [(ngModel)]="minDiscount" placeholder="Any" />
+        </div>
+
+        <div class="field">
+          <label for="f-expiring">Ending within</label>
+          <select id="f-expiring" [(ngModel)]="expiringInDays">
+            <option [ngValue]="null">Any time</option>
+            <option [ngValue]="1">24 hours</option>
+            <option [ngValue]="3">3 days</option>
+            <option [ngValue]="7">1 week</option>
+            <option [ngValue]="30">1 month</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="f-radius">Distance</label>
+          <select id="f-radius" [(ngModel)]="radius" [disabled]="!locations.hasPosition()">
+            <option [ngValue]="null">Any distance</option>
+            @for (km of radiusOptions; track km) {
+              <option [ngValue]="km">Within {{ km }} km</option>
+            }
+          </select>
+          @if (!locations.hasPosition()) {
+            <span class="hint">Share or choose a location to filter by distance.</span>
+          }
+        </div>
+      </div>
+
+      <div class="row" style="justify-content: flex-end">
+        <button type="button" class="btn btn-secondary" (click)="clearFilters()">Reset</button>
+        <button type="button" class="btn" (click)="applyFilters()">Apply filters</button>
+      </div>
+    </div>
   </div>
 
   <!-- Location strip (§8.1) -->
@@ -73,31 +212,6 @@
       @for (city of cities.slice(0, 4); track city.city) {
         <button type="button" class="chip" (click)="pickCity(city)">{{ city.city }}</button>
       }
-    }
-  </div>
-
-  <!--
-    Category quick filter (§6). Links, not buttons: each chip is the address of
-    a real category page (§27), so a crawler can follow it and a visitor can
-    open one in a new tab. A chip that is already applied points back at the
-    unfiltered listing, which is the toggle the buttons used to do by hand.
-  -->
-  <div class="category-strip">
-    <a class="chip" [class.active]="categoryId === null" routerLink="/offers" [queryParams]="chipParams()">
-      All categories
-    </a>
-    @for (category of categories(); track category.id) {
-      <a
-        class="chip"
-        [class.active]="categoryId === category.id"
-        [routerLink]="chipLink(category)"
-        [queryParams]="chipParams()"
-      >
-        {{ category.name }}
-        @if (category.offerCount) {
-          <span class="chip-count">{{ category.offerCount }}</span>
-        }
-      </a>
     }
   </div>
 
@@ -185,94 +299,6 @@
       <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">Clear all</button>
     }
   </div>
-
-  <!-- Detailed filters (§9) -->
-  @if (filtersOpen()) {
-    <div class="card filter-panel">
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="field">
-            <label for="f-shop">Shop</label>
-            <select id="f-shop" [(ngModel)]="shopId">
-              <option [ngValue]="null">Any shop</option>
-              @for (shop of shops(); track shop.id) {
-                <option [ngValue]="shop.id">{{ shop.name }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="f-category">Category</label>
-            <select id="f-category" [(ngModel)]="categoryId">
-              <option [ngValue]="null">Any category</option>
-              @for (category of categories(); track category.id) {
-                <option [ngValue]="category.id">{{ category.name }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="f-city">City</label>
-            <input id="f-city" type="text" list="city-list" [(ngModel)]="city" placeholder="e.g. Coimbatore" />
-            <datalist id="city-list">
-              @for (option of cities; track option.city) {
-                <option [value]="option.city"></option>
-              }
-            </datalist>
-          </div>
-
-          <div class="field">
-            <label for="f-pincode">Pincode</label>
-            <input id="f-pincode" type="text" [(ngModel)]="pincode" placeholder="e.g. 641004" />
-          </div>
-
-          <div class="field">
-            <label for="f-type">Offer type</label>
-            <select id="f-type" [(ngModel)]="offerType">
-              <option value="">Any type</option>
-              @for (type of offerTypes; track type.value) {
-                <option [value]="type.value">{{ type.label }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="f-discount">Minimum discount (%)</label>
-            <input id="f-discount" type="number" min="0" max="100" [(ngModel)]="minDiscount" placeholder="Any" />
-          </div>
-
-          <div class="field">
-            <label for="f-expiring">Ending within</label>
-            <select id="f-expiring" [(ngModel)]="expiringInDays">
-              <option [ngValue]="null">Any time</option>
-              <option [ngValue]="1">24 hours</option>
-              <option [ngValue]="3">3 days</option>
-              <option [ngValue]="7">1 week</option>
-              <option [ngValue]="30">1 month</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="f-radius">Distance</label>
-            <select id="f-radius" [(ngModel)]="radius" [disabled]="!locations.hasPosition()">
-              <option [ngValue]="null">Any distance</option>
-              @for (km of radiusOptions; track km) {
-                <option [ngValue]="km">Within {{ km }} km</option>
-              }
-            </select>
-            @if (!locations.hasPosition()) {
-              <span class="hint">Share or choose a location to filter by distance.</span>
-            }
-          </div>
-        </div>
-
-        <div class="row" style="justify-content: flex-end">
-          <button type="button" class="btn btn-secondary" (click)="clearFilters()">Reset</button>
-          <button type="button" class="btn" (click)="applyFilters()">Apply filters</button>
-        </div>
-      </div>
-    </div>
-  }
 
   <!-- Results -->
   @if (loading()) {

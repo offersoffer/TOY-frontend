@@ -451,6 +451,41 @@ export class OfferListComponent {
   // ---- Category chips -----------------------------------------------------
 
   /**
+   * How many category chips stand in the strip before the rest are folded away.
+   *
+   * The catalogue runs to two dozen categories and most of them have nothing in
+   * them on any given day. All of them in one scrolling row is a wall of pills
+   * the eye cannot use - so the strip shows the few worth scanning and keeps a
+   * door to the rest.
+   */
+  readonly chipLimit = 8;
+
+  readonly categoriesExpanded = signal(false);
+
+  /**
+   * Categories in the order they are worth offering.
+   *
+   * Alphabetical put "Accessories" first and "Restaurants" out of sight, which
+   * is backwards: the ones with offers in them are the ones somebody wants. The
+   * category in effect is pinned to the front so it is never the one folded
+   * away - a filter you cannot see you have applied is worse than no filter.
+   */
+  readonly orderedCategories = computed(() => {
+    this.filterTick();
+    const active = this.categoryId;
+    return [...this.categories()].sort((a, b) => {
+      if (a.id === active) return -1;
+      if (b.id === active) return 1;
+      const byCount = (b.offerCount ?? 0) - (a.offerCount ?? 0);
+      return byCount !== 0 ? byCount : a.name.localeCompare(b.name);
+    });
+  });
+
+  readonly foldedCategoryCount = computed(() =>
+    Math.max(0, this.orderedCategories().length - this.chipLimit),
+  );
+
+  /**
    * Where a chip points: the category's own page, or back to the unfiltered
    * listing when it is the one already applied, which is the toggle the chips
    * have always had. A string rather than a segment array so the binding is

@@ -100,6 +100,31 @@ export class ServiceListComponent {
   readonly activeFilterCount = computed(() => this.countActiveFilters());
   private readonly filterTick = signal(0);
 
+  // ---- Category chips -----------------------------------------------------
+  //
+  // Same treatment as the offers listing: two dozen categories in one sideways
+  // scroller is a wall of pills, so the strip shows the ones worth scanning and
+  // folds the rest behind a disclosure.
+
+  readonly chipLimit = 8;
+  readonly categoriesExpanded = signal(false);
+
+  /** Busiest first, with the category in effect pinned so it is never folded. */
+  readonly orderedCategories = computed(() => {
+    this.filterTick();
+    const active = this.categoryId;
+    return [...this.categories()].sort((a, b) => {
+      if (a.id === active) return -1;
+      if (b.id === active) return 1;
+      const byCount = (b.serviceCount ?? 0) - (a.serviceCount ?? 0);
+      return byCount !== 0 ? byCount : a.name.localeCompare(b.name);
+    });
+  });
+
+  readonly foldedCategoryCount = computed(() =>
+    Math.max(0, this.orderedCategories().length - this.chipLimit),
+  );
+
   constructor() {
     this.searchInput$.pipe(debounceTime(350), distinctUntilChanged()).subscribe((value) => {
       this.search = value;

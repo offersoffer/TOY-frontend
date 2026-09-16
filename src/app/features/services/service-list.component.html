@@ -29,12 +29,145 @@
         aria-label="Search services"
       />
     </div>
-    <button type="button" class="btn btn-secondary filter-toggle" (click)="filtersOpen.set(!filtersOpen())">
+    <button
+      type="button"
+      class="btn btn-secondary filter-toggle"
+      aria-controls="service-filters"
+      [attr.aria-expanded]="filtersOpen()"
+      (click)="filtersOpen.set(!filtersOpen())"
+    >
       Filters
       @if (activeFilterCount() > 0) {
         <span class="count">{{ activeFilterCount() }}</span>
       }
     </button>
+  </div>
+
+  <!-- Detailed filters -->
+  <div class="card filter-panel" id="service-filters" [class.collapsed]="!filtersOpen()">
+    <div class="card-body">
+      <!-- Category. Chips rather than a <select>: the count is half the
+           information, and a dropdown cannot show it. -->
+      <div class="field field-wide">
+        <span class="label-text">Category</span>
+        <div class="category-cloud" [class.expanded]="categoriesExpanded()">
+          <button
+            type="button"
+            class="chip"
+            [class.active]="categoryId === null"
+            (click)="setCategory(null)"
+          >
+            All categories
+          </button>
+          @for (category of orderedCategories(); track category.id; let i = $index) {
+            <button
+              type="button"
+              class="chip"
+              [class.active]="categoryId === category.id"
+              [class.folded]="i >= chipLimit"
+              (click)="setCategory(category.id)"
+            >
+              {{ category.name }}
+              @if (category.serviceCount) {
+                <span class="chip-count">{{ category.serviceCount }}</span>
+              }
+            </button>
+          }
+          @if (foldedCategoryCount()) {
+            <button
+              type="button"
+              class="chip chip-more"
+              [attr.aria-expanded]="categoriesExpanded()"
+              (click)="categoriesExpanded.set(!categoriesExpanded())"
+            >
+              @if (categoriesExpanded()) {
+                Show fewer
+              } @else {
+                {{ foldedCategoryCount() }} more
+              }
+              <app-icon class="more-caret" name="chevron-down-outline" [size]="13" />
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-shop">Shop</label>
+          <select id="f-shop" [(ngModel)]="shopId">
+            <option [ngValue]="null">Any shop</option>
+            @for (shop of shops(); track shop.id) {
+              <option [ngValue]="shop.id">{{ shop.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="f-city">City</label>
+          <input id="f-city" type="text" list="city-list" [(ngModel)]="city" placeholder="e.g. Coimbatore" />
+          <datalist id="city-list">
+            @for (option of cities; track option.city) {
+              <option [value]="option.city"></option>
+            }
+          </datalist>
+        </div>
+
+        <div class="field">
+          <label for="f-pincode">Pincode</label>
+          <input id="f-pincode" type="text" [(ngModel)]="pincode" placeholder="e.g. 641004" />
+        </div>
+
+        <div class="field">
+          <label for="f-pricing">Pricing</label>
+          <select id="f-pricing" [(ngModel)]="pricingType">
+            <option value="">Any pricing</option>
+            @for (type of pricingTypes; track type.value) {
+              <option [value]="type.value">{{ type.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="f-booking">Booking</label>
+          <select id="f-booking" [(ngModel)]="bookingType">
+            <option value="">Any booking type</option>
+            @for (type of bookingTypes; track type.value) {
+              <option [value]="type.value">{{ type.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field checkbox-field">
+          <label>
+            <input type="checkbox" [(ngModel)]="homeService" /> Home service available
+          </label>
+        </div>
+
+        <div class="field checkbox-field">
+          <label>
+            <input type="checkbox" [(ngModel)]="hasOffer" /> Has an active offer
+          </label>
+        </div>
+
+        <div class="field">
+          <label for="f-radius">Distance</label>
+          <select id="f-radius" [(ngModel)]="radius" [disabled]="!locations.hasPosition()">
+            <option [ngValue]="null">Any distance</option>
+            @for (km of radiusOptions; track km) {
+              <option [ngValue]="km">Within {{ km }} km</option>
+            }
+          </select>
+          @if (!locations.hasPosition()) {
+            <span class="hint">Share or choose a location to filter by distance.</span>
+          }
+        </div>
+      </div>
+
+      <div class="row" style="justify-content: flex-end">
+        <button type="button" class="btn btn-secondary" (click)="clearFilters()">Reset</button>
+        <button type="button" class="btn" (click)="applyFilters()">Apply filters</button>
+      </div>
+    </div>
   </div>
 
   <!-- Location strip -->
@@ -65,26 +198,6 @@
     }
   </div>
 
-  <!-- Category quick filter -->
-  <div class="category-strip">
-    <button type="button" class="chip" [class.active]="categoryId === null" (click)="setCategory(null)">
-      All categories
-    </button>
-    @for (category of categories(); track category.id) {
-      <button
-        type="button"
-        class="chip"
-        [class.active]="categoryId === category.id"
-        (click)="setCategory(category.id)"
-      >
-        {{ category.name }}
-        @if (category.serviceCount) {
-          <span class="chip-count">{{ category.serviceCount }}</span>
-        }
-      </button>
-    }
-  </div>
-
   <!-- Sorting -->
   <div class="toolbar">
     <div class="sorts">
@@ -106,100 +219,6 @@
       <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">Clear all</button>
     }
   </div>
-
-  <!-- Detailed filters -->
-  @if (filtersOpen()) {
-    <div class="card filter-panel">
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="field">
-            <label for="f-shop">Shop</label>
-            <select id="f-shop" [(ngModel)]="shopId">
-              <option [ngValue]="null">Any shop</option>
-              @for (shop of shops(); track shop.id) {
-                <option [ngValue]="shop.id">{{ shop.name }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="f-category">Category</label>
-            <select id="f-category" [(ngModel)]="categoryId">
-              <option [ngValue]="null">Any category</option>
-              @for (category of categories(); track category.id) {
-                <option [ngValue]="category.id">{{ category.name }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="f-city">City</label>
-            <input id="f-city" type="text" list="city-list" [(ngModel)]="city" placeholder="e.g. Coimbatore" />
-            <datalist id="city-list">
-              @for (option of cities; track option.city) {
-                <option [value]="option.city"></option>
-              }
-            </datalist>
-          </div>
-
-          <div class="field">
-            <label for="f-pincode">Pincode</label>
-            <input id="f-pincode" type="text" [(ngModel)]="pincode" placeholder="e.g. 641004" />
-          </div>
-
-          <div class="field">
-            <label for="f-pricing">Pricing</label>
-            <select id="f-pricing" [(ngModel)]="pricingType">
-              <option value="">Any pricing</option>
-              @for (type of pricingTypes; track type.value) {
-                <option [value]="type.value">{{ type.label }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="f-booking">Booking</label>
-            <select id="f-booking" [(ngModel)]="bookingType">
-              <option value="">Any booking type</option>
-              @for (type of bookingTypes; track type.value) {
-                <option [value]="type.value">{{ type.label }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="field checkbox-field">
-            <label>
-              <input type="checkbox" [(ngModel)]="homeService" /> Home service available
-            </label>
-          </div>
-
-          <div class="field checkbox-field">
-            <label>
-              <input type="checkbox" [(ngModel)]="hasOffer" /> Has an active offer
-            </label>
-          </div>
-
-          <div class="field">
-            <label for="f-radius">Distance</label>
-            <select id="f-radius" [(ngModel)]="radius" [disabled]="!locations.hasPosition()">
-              <option [ngValue]="null">Any distance</option>
-              @for (km of radiusOptions; track km) {
-                <option [ngValue]="km">Within {{ km }} km</option>
-              }
-            </select>
-            @if (!locations.hasPosition()) {
-              <span class="hint">Share or choose a location to filter by distance.</span>
-            }
-          </div>
-        </div>
-
-        <div class="row" style="justify-content: flex-end">
-          <button type="button" class="btn btn-secondary" (click)="clearFilters()">Reset</button>
-          <button type="button" class="btn" (click)="applyFilters()">Apply filters</button>
-        </div>
-      </div>
-    </div>
-  }
 
   <!-- Results -->
   @if (loading()) {

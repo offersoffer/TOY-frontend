@@ -51,7 +51,6 @@
 }
 
 .location-strip,
-.category-strip,
 .sorts {
   display: flex;
   align-items: center;
@@ -63,17 +62,61 @@
   margin-bottom: 0.75rem;
 }
 
-.category-strip {
-  margin-bottom: 0.75rem;
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  padding-bottom: 0.35rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+/* The panel stays in the DOM when closed so the category links inside it are
+   always there to be followed; only its visibility is toggled. */
+.filter-panel.collapsed {
+  display: none;
 }
 
-.category-strip .chip {
-  flex-shrink: 0;
+/* Categories live in the filter panel now, where there is room to wrap rather
+   than scroll sideways - two dozen pills in a one-line scroller was the thing
+   that made this messy. */
+.field-wide {
+  grid-column: 1 / -1;
+  margin-bottom: 1rem;
+}
+
+.label-text {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.category-cloud {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  row-gap: 0.5rem;
+}
+
+.category-cloud:not(.expanded) .chip.folded {
+  display: none;
+}
+
+/* The disclosure is a control, not a category: no fill, and it sits quietly at
+   the end of the row rather than competing with the categories themselves. */
+.chip-more {
+  background: transparent;
+  border-style: dashed;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.chip-more:hover:not(:disabled) {
+  border-style: solid;
+  color: var(--brand-strong);
+}
+
+/* One chevron, turned over: there is no chevron-up in the icon set, and adding
+   a second glyph to say the same thing would be the wrong fix. */
+.chip-more .more-caret {
+  transition: transform var(--fast) var(--ease);
+}
+
+.category-strip.expanded .chip-more .more-caret {
+  transform: rotate(180deg);
 }
 
 .chip-count {

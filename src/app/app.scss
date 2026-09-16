@@ -64,9 +64,29 @@ main {
   transition: transform var(--normal) var(--ease-spring);
 }
 
-/* The second half of the wordmark is gold, matching the gold ring. */
+/* The second half of the wordmark is gold, matching the gold ring beside it -
+   the same three stops and the same top-left-to-bottom-right sweep as the
+   `oo-gold` gradient in logo.svg.
+
+   It used to be var(--brand), which is #b45309: the dark amber the palette
+   reserves for text on light surfaces. Readable, but not the logo's colour,
+   and next to the mark the mismatch showed.
+
+   Brand gold does not meet the contrast minimum for text on a light surface,
+   which is exactly why the palette keeps the bright golds for backgrounds.
+   WCAG 1.4.3 exempts logotypes and brand names from that minimum, and this is
+   the wordmark - so the gold belongs here, and nowhere else. */
 .brand-name-accent {
-  color: var(--brand);
+  color: #ef8f00;
+}
+
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .brand-name-accent {
+    background: linear-gradient(135deg, #ffd64f 0%, #f9b417 50%, #ef8f00 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 /* ---- Location picker ----------------------------------------------------- */

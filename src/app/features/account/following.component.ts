@@ -79,7 +79,7 @@ import { IconComponent } from '../../shared/icon.component';
               <ul class="follow-list">
                 @for (category of categories(); track category.id) {
                   <li>
-                    <a class="entry" routerLink="/offers" [queryParams]="{ categoryId: category.id }">
+                    <a class="entry" [routerLink]="['/offers', 'c', category.slug]">
                       <span class="mark"><app-icon name="pricetags-outline" [size]="16" /></span>
                       <span class="entry-body">
                         <strong class="truncate">{{ category.name }}</strong>

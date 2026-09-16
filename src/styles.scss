@@ -770,6 +770,10 @@ legend {
 .chip:hover:not(:disabled) {
   border-color: var(--brand);
   color: var(--brand-strong);
+  /* Chips are anchors where they link somewhere (the category filter links to
+     the category's own page), and the global a:hover underline is wrong on a
+     pill - it is the border and lift that signal the hover here. */
+  text-decoration: none;
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }

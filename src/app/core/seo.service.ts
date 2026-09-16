@@ -115,8 +115,19 @@ export class SeoService {
     });
   }
 
-  /** "Clothing Offers in Coimbatore" (§27) - category crossed with location. */
-  categoryListing(category: Category | null, city: string | null, path: string): void {
+  /**
+   * "Clothing Offers in Coimbatore" (§27) - category crossed with location.
+   *
+   * `path` is the listing's own route, so `/offers/c/clothing` canonicalises to
+   * itself rather than to `/offers`. `noindex` is for the case that address is
+   * a slug no category answers to: the page renders, but it is not a page.
+   */
+  categoryListing(
+    category: Category | null,
+    city: string | null,
+    path: string,
+    noindex = false,
+  ): void {
     const subject = category ? `${category.name} offers` : 'Offers';
     const title = city ? `${subject} in ${city}` : `${subject} near you`;
     this.apply({
@@ -125,6 +136,7 @@ export class SeoService {
         `Find ${title.toLowerCase()} from local shops. Compare discounts, see what is ending soon and get directions — no account needed.`,
       ),
       path,
+      noindex,
     });
   }
 

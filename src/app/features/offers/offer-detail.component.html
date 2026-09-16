@@ -20,7 +20,7 @@
       <a routerLink="/offers">Offers</a>
       @if (o.category) {
         <span aria-hidden="true">›</span>
-        <a routerLink="/offers" [queryParams]="{ categoryId: o.category.id }">{{ o.category.name }}</a>
+        <a [routerLink]="['/offers', 'c', o.category.slug]">{{ o.category.name }}</a>
       }
       <span aria-hidden="true">›</span>
       <span class="truncate">{{ o.title }}</span>
@@ -73,7 +73,7 @@
 
         <div class="tags">
           @if (o.category) {
-            <a class="badge badge-brand" routerLink="/offers" [queryParams]="{ categoryId: o.category.id }">
+            <a class="badge badge-brand" [routerLink]="['/offers', 'c', o.category.slug]">
               {{ o.category.name }}
             </a>
           }

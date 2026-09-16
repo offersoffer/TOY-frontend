@@ -37,6 +37,38 @@ export const SUGGESTED_CITIES: { city: string; latitude: number; longitude: numb
 ];
 
 /**
+ * `Coimbatore` -> `coimbatore`, so a city can be a path segment on the
+ * indexable category listings (`/offers/c/clothing/coimbatore`).
+ */
+export function citySlug(city: string): string {
+  return city
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * The city a slug refers to, as the database spells it.
+ *
+ * Cities are free text on a branch rather than rows of their own, so there is
+ * no slug column to look up. A suggested city is matched on its own slug, which
+ * keeps the common ones exact; anything else is title-cased, which is how the
+ * remaining branch cities are stored. The branch filter compares under a
+ * case-insensitive collation, so only the word boundaries have to be right.
+ */
+export function cityFromSlug(slug: string): string {
+  const normalised = citySlug(slug);
+  const known = SUGGESTED_CITIES.find((entry) => citySlug(entry.city) === normalised);
+  if (known) return known.city;
+  return normalised
+    .split('-')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/**
  * Holds the customer's current or selected location.
  *
  * Location is strictly optional (§8.6): if permission is denied, or the browser

@@ -1,15 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
+import { Subject, combineLatest, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiService } from '../../core/api.service';
 import { AuthPromptService } from '../../core/auth-prompt.service';
 import { SeoService } from '../../core/seo.service';
 import { AuthService } from '../../core/auth.service';
-import { LocationService, SUGGESTED_CITIES } from '../../core/location.service';
+import { LocationService, SUGGESTED_CITIES, cityFromSlug, citySlug } from '../../core/location.service';
 import { ToastService } from '../../core/toast.service';
 import {
   Banner,
@@ -63,6 +63,7 @@ const OFFER_TYPES = [
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     OfferCardComponent,
     BannerCarouselComponent,
     OfferRailComponent,
@@ -128,6 +129,22 @@ export class OfferListComponent {
   /** "Nearby" mode is the same page with the radius filter switched on (§8.4). */
   readonly nearbyMode = signal(false);
 
+  // ---- Category route (§27) ------------------------------------------------
+  //
+  // Set when the page was entered through `/offers/c/:categorySlug` or
+  // `/offers/c/:categorySlug/:citySlug`. On those addresses the category and
+  // the city are the page's identity rather than filter state, which is what
+  // lets them carry a canonical of their own.
+  readonly routeCategorySlug = signal<string | null>(null);
+  readonly routeCitySlug = signal<string | null>(null);
+
+  /**
+   * The id the path's slug resolved to, or null while the category list is
+   * still in flight. Remembered so a filter change can tell "the visitor picked
+   * a different category" from "the id has not arrived yet".
+   */
+  private routeCategoryId: number | null = null;
+
   // Filter state, hydrated from the URL on every navigation.
   search = '';
   categoryId: number | null = null;
@@ -155,30 +172,52 @@ export class OfferListComponent {
       this.applyToUrl();
     });
 
-    this.route.queryParamMap.subscribe((params) => {
-      this.search = params.get('search') ?? '';
-      this.categoryId = this.num(params.get('categoryId'));
-      this.shopId = this.num(params.get('shopId'));
-      this.city = params.get('city') ?? '';
-      this.pincode = params.get('pincode') ?? '';
-      this.minDiscount = this.num(params.get('minDiscount'));
-      this.offerType = params.get('offerType') ?? '';
-      this.expiringInDays = this.num(params.get('expiringInDays'));
-      this.page = this.num(params.get('page')) ?? 1;
+    // Both halves of the URL matter now that a category can arrive as a path
+    // segment. Angular emits each of them on every navigation, so the pair is
+    // collapsed into one tick rather than loading the listing twice.
+    combineLatest([this.route.paramMap, this.route.queryParamMap])
+      .pipe(debounceTime(0))
+      .subscribe(([path, params]) => {
+        const slug = path.get('categorySlug');
+        const city = path.get('citySlug');
+        this.routeCategorySlug.set(slug);
+        this.routeCitySlug.set(city);
 
-      const radiusParam = this.num(params.get('radius'));
-      this.radius = radiusParam ?? (this.nearbyMode() ? environment.defaultRadiusKm : null);
+        this.search = params.get('search') ?? '';
+        // On a category route the slug is the filter; the query parameter form
+        // is what the in-app chips and the filter panel write.
+        this.routeCategoryId = slug ? (this.categoryBySlug(slug)?.id ?? null) : null;
+        this.categoryId = slug ? this.routeCategoryId : this.num(params.get('categoryId'));
+        this.shopId = this.num(params.get('shopId'));
+        this.city = city ? cityFromSlug(city) : (params.get('city') ?? '');
+        this.pincode = params.get('pincode') ?? '';
+        this.minDiscount = this.num(params.get('minDiscount'));
+        this.offerType = params.get('offerType') ?? '';
+        this.expiringInDays = this.num(params.get('expiringInDays'));
+        this.page = this.num(params.get('page')) ?? 1;
 
-      const sortParam = params.get('sort') as OfferSort | null;
-      this.sort = sortParam ?? (this.nearbyMode() ? 'nearest' : 'newest');
+        const radiusParam = this.num(params.get('radius'));
+        this.radius = radiusParam ?? (this.nearbyMode() ? environment.defaultRadiusKm : null);
 
-      this.filterTick.update((tick) => tick + 1);
-      this.describePage();
-      this.load();
-    });
+        const sortParam = params.get('sort') as OfferSort | null;
+        this.sort = sortParam ?? (this.nearbyMode() ? 'nearest' : 'newest');
+
+        this.filterTick.update((tick) => tick + 1);
+        this.describePage();
+        this.load();
+      });
 
     this.api.listCategories().subscribe((categories) => {
       this.categories.set(categories);
+      // A category route filters through the API on the slug itself, so the
+      // listing is already right; the id is what the chips highlight, and it
+      // only exists now. No reload - it selects the same category.
+      const slug = this.routeCategorySlug();
+      if (slug) {
+        this.routeCategoryId = this.categoryBySlug(slug)?.id ?? null;
+        this.categoryId = this.routeCategoryId;
+        this.filterTick.update((tick) => tick + 1);
+      }
       // The category name is only known once this resolves, so the title is
       // written again rather than left as the generic "Offers near you".
       this.describePage();
@@ -238,19 +277,55 @@ export class OfferListComponent {
   /**
    * §27: "Clothing Offers in Coimbatore". The listing is the page a search
    * engine is most likely to land on, so its title tracks the category and city
-   * the visitor is actually filtered to. The canonical drops the query string,
-   * which is why the same listing under a dozen filter combinations does not
-   * present itself as a dozen pages.
+   * the visitor is actually filtered to. The canonical still drops the query
+   * string, which is why the same listing under a dozen filter combinations
+   * does not present itself as a dozen pages - but it now points at the
+   * category's own route rather than flattening every category onto `/offers`.
    */
   private describePage(): void {
-    const category = this.categoryId
-      ? (this.categories().find((item) => item.id === this.categoryId) ?? null)
-      : null;
+    const category = this.selectedCategory();
     // Only a real place belongs in the title - the picker's "All locations" and
     // "Near me" placeholders would read as city names to a search engine.
     const picked = this.locations.location();
     const city = this.city || (picked.city ?? null);
-    this.seo.categoryListing(category, city, this.nearbyMode() ? '/nearby' : '/offers');
+    // A slug nobody's category answers to is a typo, not a page. It renders the
+    // ordinary empty state, but it must not invite a crawler to index itself.
+    const unknown = !!this.routeCategorySlug() && this.categories().length > 0 && !category;
+    this.seo.categoryListing(category, city, this.canonicalPath(category), unknown);
+  }
+
+  /**
+   * The address this view claims as its own.
+   *
+   * Category listings have real routes now, so `/offers?categoryId=3` points at
+   * `/offers/c/clothing`: the filtered view still is not a page of its own, but
+   * the page it is a view of finally exists, and the sitemap can name it.
+   *
+   * Only a city that is in the URL counts. The location picker is a per-visitor
+   * setting - letting it into the canonical would have two visitors reading the
+   * same address disagree about which page they are on, and a crawler, which
+   * grants no location at all, agree with neither.
+   */
+  private canonicalPath(category: Category | null): string {
+    // `/nearby` renders from coordinates a crawler has not got, which is why it
+    // is out of the sitemap; it has no category address to point at either.
+    if (this.nearbyMode()) return '/nearby';
+
+    const slug = this.routeCategorySlug() ?? category?.slug ?? null;
+    if (!slug) return '/offers';
+
+    const city = this.routeCitySlug() ?? (this.city ? citySlug(this.city) : null);
+    return city ? `/offers/c/${slug}/${city}` : `/offers/c/${slug}`;
+  }
+
+  private selectedCategory(): Category | null {
+    return this.categoryId
+      ? (this.categories().find((item) => item.id === this.categoryId) ?? null)
+      : null;
+  }
+
+  private categoryBySlug(slug: string): Category | null {
+    return this.categories().find((category) => category.slug === slug) ?? null;
   }
 
   // ---- Data ---------------------------------------------------------------
@@ -263,7 +338,15 @@ export class OfferListComponent {
       page: this.page,
       limit: environment.pageSize,
       search: this.search || undefined,
-      categoryId: this.categoryId ?? undefined,
+      // A category route filters on its slug, before and after the category list
+      // resolves. The API takes either, so the page renders filtered on first
+      // paint rather than flashing the whole catalogue - but the two forms are
+      // not quite the same predicate (the id form also matches an offer's
+      // subcategory), and one address must not change what it means the moment
+      // the visitor sorts it. The sitemap counts its offers with the slug form
+      // too, so a listing it advertises is a listing with something on it.
+      categoryId: this.routeCategorySlug() ? undefined : (this.categoryId ?? undefined),
+      category: this.routeCategorySlug() ?? undefined,
       shopId: this.shopId ?? undefined,
       city: this.city || undefined,
       pincode: this.pincode || undefined,
@@ -301,12 +384,6 @@ export class OfferListComponent {
 
   onSearchInput(value: string): void {
     this.searchInput$.next(value);
-  }
-
-  setCategory(id: number | null): void {
-    this.categoryId = this.categoryId === id ? null : id;
-    this.page = 1;
-    this.applyToUrl();
   }
 
   setSort(sort: OfferSort): void {
@@ -371,6 +448,44 @@ export class OfferListComponent {
     this.loadSections();
   }
 
+  // ---- Category chips -----------------------------------------------------
+
+  /**
+   * Where a chip points: the category's own page, or back to the unfiltered
+   * listing when it is the one already applied, which is the toggle the chips
+   * have always had. A string rather than a segment array so the binding is
+   * compared by value and the href is not rebuilt on every change detection.
+   */
+  chipLink(category: Category): string {
+    return this.categoryId === category.id ? '/offers' : `/offers/c/${category.slug}`;
+  }
+
+  /**
+   * What a chip carries across.
+   *
+   * The category is in the chip's path, so everything else the visitor has set
+   * rides along as query parameters - picking a category should not silently
+   * throw away their search. The city comes too, as a parameter rather than the
+   * path segment, and the page canonicalises it back into the path on arrival.
+   *
+   * Defaults are left out, so on the unfiltered listing a crawler reads a bare
+   * `/offers/c/clothing` rather than a filtered view of it.
+   */
+  readonly chipParams = computed<Params>(() => {
+    this.filterTick();
+    const params: Params = {};
+    if (this.search) params['search'] = this.search;
+    if (this.shopId) params['shopId'] = this.shopId;
+    if (this.city) params['city'] = this.city;
+    if (this.pincode) params['pincode'] = this.pincode;
+    if (this.radius) params['radius'] = this.radius;
+    if (this.minDiscount) params['minDiscount'] = this.minDiscount;
+    if (this.offerType) params['offerType'] = this.offerType;
+    if (this.expiringInDays) params['expiringInDays'] = this.expiringInDays;
+    if (this.sort !== (this.nearbyMode() ? 'nearest' : 'newest')) params['sort'] = this.sort;
+    return params;
+  });
+
   // ---- Favourites ---------------------------------------------------------
 
   toggleFavorite(offer: Offer): void {
@@ -411,30 +526,77 @@ export class OfferListComponent {
 
   // ---- URL sync -----------------------------------------------------------
 
+  /**
+   * Writes the current filters back into the URL.
+   *
+   * On a category route the category and the city are path segments, so a
+   * change to either is a move to a different address rather than a query
+   * parameter edit. Everything else - sort, page, discount - stays a query
+   * parameter layered on top, which is how a visitor who arrived on
+   * `/offers/c/clothing` keeps that address while they sort and page.
+   */
   private applyToUrl(): void {
+    const onCategoryRoute = this.routeCategorySlug() !== null;
+    if (onCategoryRoute && !this.pathStillDescribes()) {
+      this.navigateToListing();
+      return;
+    }
+
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: {
-        search: this.search || null,
-        categoryId: this.categoryId,
-        shopId: this.shopId,
-        city: this.city || null,
-        pincode: this.pincode || null,
-        radius: this.radius,
-        minDiscount: this.minDiscount,
-        offerType: this.offerType || null,
-        expiringInDays: this.expiringInDays,
-        sort: this.sort,
-        page: this.page > 1 ? this.page : null,
-      },
+      queryParams: this.filterQueryParams(onCategoryRoute),
       queryParamsHandling: 'merge',
     });
+  }
+
+  /** Whether the path segments still name the category and city in effect. */
+  private pathStillDescribes(): boolean {
+    return (
+      this.categoryId === this.routeCategoryId &&
+      (this.routeCitySlug() ?? '') === (this.city ? citySlug(this.city) : '')
+    );
+  }
+
+  /**
+   * Moves to the address the current filters belong at: the category's own
+   * route while one is selected, plain `/offers` once it has been cleared.
+   */
+  private navigateToListing(): void {
+    const category = this.selectedCategory();
+    const path = category
+      ? ['/offers', 'c', category.slug, ...(this.city ? [citySlug(this.city)] : [])]
+      : ['/offers'];
+
+    void this.router.navigate(path, { queryParams: this.filterQueryParams(category !== null) });
+  }
+
+  /**
+   * Filter state as query parameters. `inPath` drops the two the category route
+   * carries as segments, so the URL never states a filter twice and the two
+   * copies can never disagree.
+   */
+  private filterQueryParams(inPath: boolean): Params {
+    return {
+      search: this.search || null,
+      categoryId: inPath ? null : this.categoryId,
+      shopId: this.shopId,
+      city: inPath ? null : this.city || null,
+      pincode: this.pincode || null,
+      radius: this.radius,
+      minDiscount: this.minDiscount,
+      offerType: this.offerType || null,
+      expiringInDays: this.expiringInDays,
+      sort: this.sort,
+      page: this.page > 1 ? this.page : null,
+    };
   }
 
   private countActiveFilters(): number {
     this.filterTick();
     let count = 0;
-    if (this.categoryId) count++;
+    // The path's category counts even before its id has resolved, so the
+    // merchandising rails stay hidden on a category listing from first paint.
+    if (this.categoryId || this.routeCategorySlug()) count++;
     if (this.shopId) count++;
     if (this.city) count++;
     if (this.pincode) count++;

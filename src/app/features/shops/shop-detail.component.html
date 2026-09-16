@@ -32,7 +32,7 @@
 
         <div class="cats">
           @for (category of s.categories; track category.id) {
-            <a class="badge badge-brand" routerLink="/offers" [queryParams]="{ categoryId: category.id }">
+            <a class="badge badge-brand" [routerLink]="['/offers', 'c', category.slug]">
               {{ category.name }}
             </a>
           }

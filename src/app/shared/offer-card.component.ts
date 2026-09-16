@@ -68,7 +68,7 @@ import { IconComponent } from '../shared/icon.component';
         }
 
         @if (offer.category) {
-          <a class="category" [routerLink]="['/offers']" [queryParams]="{ categoryId: offer.category.id }">
+          <a class="category" [routerLink]="['/offers', 'c', offer.category.slug]">
             {{ offer.category.name }}
           </a>
         }

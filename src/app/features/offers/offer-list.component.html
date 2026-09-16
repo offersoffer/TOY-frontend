@@ -76,23 +76,28 @@
     }
   </div>
 
-  <!-- Category quick filter (§6) -->
+  <!--
+    Category quick filter (§6). Links, not buttons: each chip is the address of
+    a real category page (§27), so a crawler can follow it and a visitor can
+    open one in a new tab. A chip that is already applied points back at the
+    unfiltered listing, which is the toggle the buttons used to do by hand.
+  -->
   <div class="category-strip">
-    <button type="button" class="chip" [class.active]="categoryId === null" (click)="setCategory(null)">
+    <a class="chip" [class.active]="categoryId === null" routerLink="/offers" [queryParams]="chipParams()">
       All categories
-    </button>
+    </a>
     @for (category of categories(); track category.id) {
-      <button
-        type="button"
+      <a
         class="chip"
         [class.active]="categoryId === category.id"
-        (click)="setCategory(category.id)"
+        [routerLink]="chipLink(category)"
+        [queryParams]="chipParams()"
       >
         {{ category.name }}
         @if (category.offerCount) {
           <span class="chip-count">{{ category.offerCount }}</span>
         }
-      </button>
+      </a>
     }
   </div>
 

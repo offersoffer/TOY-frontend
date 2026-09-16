@@ -37,7 +37,7 @@ import { EmptyStateComponent } from '../../shared/ui.components';
         <div class="grid grid-cards stagger">
           @for (category of categories(); track category.id) {
             <div class="cat-card card">
-              <a class="cat-main" [routerLink]="['/offers']" [queryParams]="{ categoryId: category.id }">
+              <a class="cat-main" [routerLink]="['/offers', 'c', category.slug]">
                 <app-icon class="cat-icon" [name]="iconFor(category.name)" [size]="22" />
                 <h2>{{ category.name }}</h2>
                 @if (category.description) {

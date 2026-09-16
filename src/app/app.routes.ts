@@ -55,6 +55,24 @@ export const routes: Routes = [
     title: 'Offers · OffersOffer',
     loadComponent: () => import('./features/offers/offer-list.component').then((m) => m.OfferListComponent),
   },
+  // §27: the indexable address for a category listing. `/offers?categoryId=3`
+  // stays the in-app filter form and canonicalises here, so the long-tail page
+  // a search engine wants to rank ("Clothing offers in Coimbatore") finally has
+  // a URL that claims itself.
+  //
+  // The `/c/` segment is what keeps this off `/offers/:id` below: a slug and a
+  // numeric offer id would otherwise be the same shape, and the detail route
+  // would swallow every category.
+  {
+    path: 'offers/c/:categorySlug',
+    title: 'Offers · OffersOffer',
+    loadComponent: () => import('./features/offers/offer-list.component').then((m) => m.OfferListComponent),
+  },
+  {
+    path: 'offers/c/:categorySlug/:citySlug',
+    title: 'Offers · OffersOffer',
+    loadComponent: () => import('./features/offers/offer-list.component').then((m) => m.OfferListComponent),
+  },
   {
     path: 'offers/:id',
     title: 'Offer details · OffersOffer',

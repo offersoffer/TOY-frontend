@@ -154,6 +154,15 @@ export const routes: Routes = [
     title: 'Terms & Conditions · OffersOffer',
     loadComponent: () => import('./features/pages/terms.component').then((m) => m.TermsComponent),
   },
+  // Submitted to the Google Play Console as the app's "Data deletion" URL, so
+  // this path is effectively permanent: changing it breaks a link Google holds
+  // and re-triggers a policy review.
+  {
+    path: 'delete-account',
+    title: 'Delete Your Account · OffersOffer',
+    loadComponent: () =>
+      import('./features/pages/delete-account.component').then((m) => m.DeleteAccountComponent),
+  },
 
   // ---- Signed-in customer areas -------------------------------------------
   {

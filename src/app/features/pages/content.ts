@@ -434,3 +434,77 @@ export const TERMS_SECTIONS: LegalSection[] = [
     ],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Account & data deletion
+// ---------------------------------------------------------------------------
+
+/**
+ * The page behind the "Data deletion" URL submitted in the Google Play
+ * Console, which Play requires to be reachable **without installing the app
+ * and without signing in** — the reader may be someone who has already
+ * uninstalled it, or a reviewer who never had an account.
+ *
+ * That constraint is why this is a page of its own rather than a section of
+ * the Privacy Policy: Play asks for a single URL that is about deletion and
+ * nothing else, and the retention table below is the part reviewers actually
+ * check. Keep it truthful against `DELETE /api/users/me` — a page that claims
+ * to delete more than the code does is the version that causes a rejection.
+ */
+export const DELETE_ACCOUNT_SECTIONS: LegalSection[] = [
+  {
+    heading: 'Delete your account from the app',
+    body: [
+      'The fastest way to delete your OffersOffer account is from inside the app. It takes effect immediately — there is no waiting period and no request for us to process.',
+    ],
+    list: [
+      'Open the OffersOffer app and sign in',
+      'Go to Profile',
+      'Tap Delete Account',
+      'Enter your password and type DELETE to confirm',
+    ],
+    callout: 'Deletion is immediate and permanent. We cannot restore an account once it is deleted.',
+  },
+  {
+    heading: 'Delete your account without the app',
+    body: [
+      'If you have already uninstalled the app, or cannot sign in, email us from the address on the account and we will delete it for you.',
+      'Send the request to the support address at the bottom of this page with the subject "Delete my account". We will confirm within 30 days, and in practice much sooner.',
+      'We will only act on a request sent from the email address registered to the account. That is a protection for you: it is the one thing that stops somebody else deleting your account.',
+    ],
+  },
+  {
+    heading: 'What is deleted',
+    body: [
+      'Deleting your account permanently removes the personal data we hold about you:',
+    ],
+    list: [
+      'Your profile — name, email address, phone number and profile picture',
+      'Saved offers, favourites and the shops you follow',
+      'Your claims, bookings and the QR codes issued for them',
+      'Reviews and ratings you have written',
+      'Notifications, notification preferences and every device registered for push',
+      'Your search history and saved locations',
+      'All sign-in sessions, on every device',
+    ],
+  },
+  {
+    heading: 'What we keep, and for how long',
+    body: [
+      'Two kinds of record outlive the account, and both are stripped of anything that identifies you:',
+    ],
+    list: [
+      'Redemptions a shop has already honoured. These are the shop’s record of a transaction rather than your personal data, so the redemption stays but your name is removed from it. Kept as long as the shop remains on OffersOffer.',
+      'Security and audit records — that an account was deleted, and when. Kept for 12 months, and required to answer a later question about your own deletion request.',
+    ],
+    callout:
+      'Neither record can be used to identify you or to rebuild your account. Nothing retained is used for marketing, and nothing is shared with shops.',
+  },
+  {
+    heading: 'If you manage a shop',
+    body: [
+      'A shop with offers running cannot be left without anyone to manage it, so if you are an administrator of a shop on OffersOffer, the app will ask you to hand it over or close it first.',
+      'Contact support and we will either transfer the shop to another administrator you nominate, or close the shop and then delete your account. Neither costs you anything and neither takes more than a day.',
+    ],
+  },
+];

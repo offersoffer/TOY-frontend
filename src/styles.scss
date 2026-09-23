@@ -312,9 +312,14 @@ img {
   }
 }
 
-/** Entrance for a whole view; children can stagger on top of it. */
+/** Entrance for a whole view; children can stagger on top of it.
+    Only top/bottom padding here - `.page` is always paired with `.container`
+    on the same element (never used alone), and a `padding` shorthand here
+    would reset the left/right padding `.container` provides, since both
+    classes have equal specificity and this rule comes first. */
 .page {
-  padding: 1.6rem 0 3rem;
+  padding-top: 1.6rem;
+  padding-bottom: 3rem;
   animation: rise-in var(--slow) var(--ease-out) both;
 }
 
@@ -964,7 +969,8 @@ table.data tbody tr:last-child td {
     font-size: 1.38rem;
   }
   .page {
-    padding: 1rem 0 2.5rem;
+    padding-top: 1rem;
+    padding-bottom: 2.5rem;
   }
 }
 

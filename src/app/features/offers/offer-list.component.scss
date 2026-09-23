@@ -153,6 +153,8 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin-right: 0.2rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .filter-panel {

@@ -24,7 +24,7 @@ import { BusinessFiltersService } from './business-filters.service';
       <div class="page-header">
         <div>
           <h1>Business dashboard</h1>
-          <p class="subtitle">How is the Offers App business performing?</p>
+          <p class="subtitle">How is the OffersOffer business performing?</p>
         </div>
         <span class="badge badge-brand">Super Admin only</span>
       </div>

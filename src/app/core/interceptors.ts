@@ -193,7 +193,7 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
           const base =
             message ??
             (unreachable
-              ? 'We’re having trouble connecting to Offers App. Please try again.'
+              ? 'We’re having trouble connecting to OffersOffer. Please try again.'
               : 'Something went wrong on our side. Please try again.');
           toast.error(requestId ? `${base} (Reference: ${requestId})` : base);
         } else if (error.status !== 422 && error.status !== 401 && message) {

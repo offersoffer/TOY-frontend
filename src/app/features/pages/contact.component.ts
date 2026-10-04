@@ -76,10 +76,10 @@ import { SUPPORT_EMAIL, SUPPORT_PHONES } from './content';
             <app-icon class="glyph" name="storefront-outline" [size]="20" />
             <h2>For businesses</h2>
             <p class="small muted">
-              Want your shop’s offers on Offers App? Get in touch, or create an account and add your
+              Want your shop’s offers on OffersOffer? Get in touch, or create an account and add your
               shop — we review each one before it goes live.
             </p>
-            <p class="small mb-0"><a routerLink="/about">About Offers App</a></p>
+            <p class="small mb-0"><a routerLink="/about">About OffersOffer</a></p>
           </div>
         </div>
       </div>
@@ -134,7 +134,7 @@ export class ContactComponent {
   constructor() {
     this.seo.apply({
       title: 'Contact us',
-      description: `Reach the Offers App team by email at ${SUPPORT_EMAIL} or by phone, or raise a support request and get a ticket reference.`,
+      description: `Reach the OffersOffer team by email at ${SUPPORT_EMAIL} or by phone, or raise a support request and get a ticket reference.`,
       path: '/contact',
     });
   }

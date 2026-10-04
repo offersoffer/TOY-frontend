@@ -19,7 +19,7 @@ import { POLICY_LAST_UPDATED, TERMS_SECTIONS } from './content';
   template: `
     <app-legal-shell
       heading="Terms & Conditions"
-      intro="These terms cover your use of Offers App — what you can expect from us, and what we ask of you."
+      intro="These terms cover your use of OffersOffer — what you can expect from us, and what we ask of you."
       [lastUpdated]="lastUpdated"
       [sections]="sections"
     />
@@ -35,7 +35,7 @@ export class TermsComponent {
     this.seo.apply({
       title: 'Terms & Conditions',
       description:
-        'The terms covering use of Offers App: accounts, claim codes, what shops are responsible for, acceptable use and merchant obligations.',
+        'The terms covering use of OffersOffer: accounts, claim codes, what shops are responsible for, acceptable use and merchant obligations.',
       path: '/terms',
     });
   }

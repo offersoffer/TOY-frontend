@@ -121,7 +121,7 @@ export const routes: Routes = [
   // is exactly the person who needs the support form.
   {
     path: 'about',
-    title: 'About Offers App · OffersOffer',
+    title: 'About us · OffersOffer',
     loadComponent: () => import('./features/pages/about.component').then((m) => m.AboutComponent),
   },
   {
@@ -280,28 +280,28 @@ export const routes: Routes = [
       // the shop's subscription plan by the API, which is the real check.
       {
         path: 'ai/assistant',
-        title: 'AI Offer Assistant · Offers App',
+        title: 'AI Offer Assistant · OffersOffer',
         canActivate: [permissionGuard(PERMISSIONS.USE_AI_ASSISTANT)],
         loadComponent: () =>
           import('./features/ai/ai-assistant.component').then((m) => m.AiAssistantComponent),
       },
       {
         path: 'ai/history',
-        title: 'AI usage & history · Offers App',
+        title: 'AI usage & history · OffersOffer',
         canActivate: [permissionGuard(PERMISSIONS.USE_AI_CONTENT, PERMISSIONS.USE_AI_ASSISTANT)],
         loadComponent: () =>
           import('./features/ai/ai-history.component').then((m) => m.AiHistoryComponent),
       },
       {
         path: 'offers/:id/improve',
-        title: 'Improve this offer · Offers App',
+        title: 'Improve this offer · OffersOffer',
         canActivate: [permissionGuard(PERMISSIONS.USE_AI_CONTENT)],
         loadComponent: () =>
           import('./features/ai/ai-improve.component').then((m) => m.AiImproveComponent),
       },
       {
         path: 'subscriptions',
-        title: 'Subscriptions & AI limits · Offers App',
+        title: 'Subscriptions & AI limits · OffersOffer',
         canActivate: [superAdminGuard],
         loadComponent: () =>
           import('./features/admin/subscription-manage.component').then(

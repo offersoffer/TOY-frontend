@@ -16,7 +16,7 @@ import { POLICY_LAST_UPDATED, PRIVACY_SECTIONS } from './content';
   template: `
     <app-legal-shell
       heading="Privacy Policy"
-      intro="This policy explains what information Offers App collects, why we collect it, and what you can do about it."
+      intro="This policy explains what information OffersOffer collects, why we collect it, and what you can do about it."
       [lastUpdated]="lastUpdated"
       [sections]="sections"
     />
@@ -32,7 +32,7 @@ export class PrivacyComponent {
     this.seo.apply({
       title: 'Privacy Policy',
       description:
-        'What information Offers App collects, how location and claim data are used, who it is shared with, and how to ask us about your own.',
+        'What information OffersOffer collects, how location and claim data are used, who it is shared with, and how to ask us about your own.',
       path: '/privacy',
     });
   }

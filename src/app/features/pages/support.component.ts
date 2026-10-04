@@ -595,7 +595,7 @@ export class SupportComponent {
     this.seo.apply({
       title: 'Support',
       description:
-        'Get help with Offers App — raise a support request and get a ticket reference, or find an answer in the common questions.',
+        'Get help with OffersOffer — raise a support request and get a ticket reference, or find an answer in the common questions.',
       path: '/support',
     });
 

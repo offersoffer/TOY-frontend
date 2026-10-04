@@ -8,7 +8,7 @@ import { IconComponent } from '../../shared/icon.component';
 import { ABOUT_FEATURES } from './content';
 
 /**
- * About Offers App.
+ * About OffersOffer.
  *
  * Written for a customer, not for a regulator: what the platform is for, and
  * what you can do with it. The legal register belongs on the Privacy and Terms
@@ -24,10 +24,10 @@ import { ABOUT_FEATURES } from './content';
   template: `
     <div class="container page">
       <header class="hero">
-        <h1>About Offers App</h1>
+        <h1>About OffersOffer</h1>
         <p class="lead">Discover better offers. Find useful services. Shop smarter.</p>
         <p>
-          Offers App is a local discovery platform that helps customers find offers, discounts,
+          OffersOffer is a local discovery platform that helps customers find offers, discounts,
           promotions and services from shops around them.
         </p>
         <p>
@@ -55,7 +55,7 @@ import { ABOUT_FEATURES } from './content';
         <div class="card-body">
           <h2 id="for-merchants">Built for local businesses</h2>
           <p>
-            Offers App helps shops show their offers and services to nearby customers, and gives
+            OffersOffer helps shops show their offers and services to nearby customers, and gives
             merchants something they rarely get from a poster or a story post: how many people saw a
             listing, how many claimed it, and how many of those claims were actually redeemed at the
             counter.
@@ -176,9 +176,9 @@ export class AboutComponent {
 
   constructor() {
     this.seo.apply({
-      title: 'About Offers App',
+      title: 'About OffersOffer',
       description:
-        'Offers App is a local discovery platform for finding offers, discounts and services from shops near you — browsable without an account.',
+        'OffersOffer is a local discovery platform for finding offers, discounts and services from shops near you — browsable without an account.',
       path: '/about',
     });
   }

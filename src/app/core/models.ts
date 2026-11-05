@@ -42,6 +42,10 @@ export interface ShopMembership {
   designation: string | null;
   roleName: string | null;
   permissions: string[];
+  /** Where this shop sits in review, or null if it never went through it. */
+  verificationStatus: string | null;
+  /** True while a registration is still waiting on its first decision (§12). */
+  awaitingFirstApproval: boolean;
 }
 
 export interface CurrentUser {

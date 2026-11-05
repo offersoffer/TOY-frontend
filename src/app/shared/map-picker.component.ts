@@ -33,6 +33,21 @@ export interface PickedLocation {
   label: string | null;
 }
 
+/**
+ * A pin that has moved but that nobody has vouched for yet (V3 §8).
+ *
+ * Deliberately a different shape from `PickedLocation`: that one carries the
+ * resolved address and means "the merchant says this is the place", while
+ * this one means only "the pin is here now". Keeping them apart is what stops
+ * a caller treating a drag as a confirmation.
+ */
+export interface MovedPin {
+  latitude: number;
+  longitude: number;
+  source: LocationSource;
+  accuracy: number | null;
+}
+
 interface Tile {
   key: string;
   url: string;
@@ -452,6 +467,15 @@ export class MapPickerComponent {
   readonly addressHint = input<string>('');
 
   readonly picked = output<PickedLocation>();
+  /**
+   * The pin moved, but has not been confirmed (§8).
+   *
+   * Without this a form cannot tell "no location yet" from "a pin is sitting
+   * there unconfirmed", because the only thing it would ever hear is the
+   * confirmation - which makes the middle state, whose whole job is to say
+   * "now press Confirm", unreachable.
+   */
+  readonly pinMoved = output<MovedPin>();
 
   readonly attribution = environment.mapAttribution;
 
@@ -648,6 +672,17 @@ export class MapPickerComponent {
     this.placeId = null;
     this.confirmed.set(false);
     this.requestReverse();
+    this.emitMoved();
+  }
+
+  /** Tells the parent the pin is somewhere new and still unconfirmed (§8). */
+  private emitMoved(): void {
+    this.pinMoved.emit({
+      latitude: Number(this.latitudeSignal().toFixed(7)),
+      longitude: Number(this.longitudeSignal().toFixed(7)),
+      source: this.source,
+      accuracy: this.accuracy,
+    });
   }
 
   onPointerDown(event: PointerEvent): void {
@@ -748,6 +783,7 @@ export class MapPickerComponent {
     this.resolved.set(place);
     this.results.set([]);
     this.confirmed.set(false);
+    this.emitMoved();
     this.notice.set('Pin placed from the search. Drag the map if it is not exactly right.');
   }
 
@@ -770,6 +806,7 @@ export class MapPickerComponent {
         this.accuracy = Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null;
         this.placeId = null;
         this.confirmed.set(false);
+        this.emitMoved();
         // §25: an imprecise fix is still a useful starting point, so this says
         // what it is rather than refusing it.
         this.notice.set(

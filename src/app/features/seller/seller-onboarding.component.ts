@@ -14,7 +14,7 @@ import {
 } from '../../core/onboarding.service';
 import { Category, LocationSource } from '../../core/models';
 import { StepperComponent, WizardStep } from '../../shared/stepper.component';
-import { MapPickerComponent, PickedLocation } from '../../shared/map-picker.component';
+import { MapPickerComponent, MovedPin, PickedLocation } from '../../shared/map-picker.component';
 import { IconComponent } from '../../shared/icon.component';
 
 /**
@@ -357,6 +357,22 @@ export class SellerOnboardingComponent implements OnInit {
     this.selectedCategories.set(
       current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
     );
+  }
+
+  /**
+   * §7's middle state: a pin exists but nobody has vouched for it.
+   *
+   * Recorded so the banner can say "now press Confirm" and - just as
+   * important - so `locationReady` stays false. Coordinates on their own are
+   * not a confirmation, and §7 is explicit that they must never be treated as
+   * one.
+   */
+  onPinMoved(pin: MovedPin): void {
+    this.latitude.set(pin.latitude);
+    this.longitude.set(pin.longitude);
+    this.locationSource = pin.source;
+    this.locationAccuracy = pin.accuracy;
+    this.locationConfirmed.set(false);
   }
 
   /** §7: the seller pressed Confirm on the map. */

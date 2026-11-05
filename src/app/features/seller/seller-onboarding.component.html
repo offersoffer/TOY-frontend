@@ -247,6 +247,7 @@
               [latitude]="latitude()"
               [longitude]="longitude()"
               [addressHint]="addressHint()"
+              (pinMoved)="onPinMoved($event)"
               (picked)="onPicked($event)"
             />
 

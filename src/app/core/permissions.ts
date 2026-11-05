@@ -26,6 +26,10 @@ export const PERMISSIONS = {
 
   MANAGE_CATEGORIES: 'MANAGE_CATEGORIES',
 
+  // Onboarding §14: who may decide a seller registration. Granted globally
+  // only — a merchant holding it through a shop could approve their own.
+  REVIEW_SELLER_REGISTRATIONS: 'REVIEW_SELLER_REGISTRATIONS',
+
   // Granted individually — holding ADMIN does not imply any of these (§6).
   VIEW_BANNERS: 'VIEW_BANNERS',
   CREATE_BANNER: 'CREATE_BANNER',

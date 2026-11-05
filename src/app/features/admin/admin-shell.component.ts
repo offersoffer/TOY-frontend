@@ -249,6 +249,14 @@ export class AdminShellComponent {
       permissions: [PERMISSIONS.USE_AI_CONTENT, PERMISSIONS.USE_AI_ASSISTANT],
     },
     {
+      // Onboarding §14. Above Shops on purpose: a queue has people waiting in
+      // it, and the shop list does not.
+      label: 'Registrations',
+      route: '/admin/registrations',
+      icon: 'shield-checkmark-outline',
+      permissions: [PERMISSIONS.REVIEW_SELLER_REGISTRATIONS],
+    },
+    {
       label: 'Shops',
       route: '/admin/shops',
       icon: 'storefront-outline',

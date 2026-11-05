@@ -32,6 +32,17 @@ export interface RegistrationAddress {
   locationConfirmedAt: string | null;
 }
 
+/**
+ * §8's optional evidence. Returned only to the seller themselves or to a
+ * reviewer - §19 keeps it off every public shop response.
+ */
+export interface VerificationEvidence {
+  gstin?: string | null;
+  googleBusinessUrl?: string | null;
+  businessRegistrationNumber?: string | null;
+  note?: string | null;
+}
+
 export interface Registration {
   shopId: number;
   slug: string;
@@ -48,6 +59,7 @@ export interface Registration {
   decidedAt: string | null;
   /** Shown to the seller verbatim when more information is needed (§12). */
   decisionReason: string | null;
+  verification?: VerificationEvidence;
   canEdit: boolean;
   canSubmit: boolean;
   isPublic: boolean;

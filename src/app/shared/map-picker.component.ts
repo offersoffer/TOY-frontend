@@ -91,6 +91,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
   imports: [CommonModule, IconComponent],
   template: `
     <div class="picker">
+      @if (!readonly()) {
       <div class="toolbar">
         <div class="search">
           <app-icon name="search-outline" [size]="16" />
@@ -141,6 +142,8 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
           {{ locating() ? 'Locating…' : 'Use my current location' }}
         </button>
       </div>
+
+      }
 
       @if (notice(); as message) {
         <p class="notice">{{ message }}</p>
@@ -207,19 +210,21 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
               Looking up this spot…
             } @else if (resolved(); as place) {
               {{ place.label }}
-            } @else {
+            } @else if (!readonly()) {
               Drag the map so the pin sits on your shop front.
             }
           </p>
         </div>
 
-        <button type="button" class="btn btn-sm" (click)="confirm()" [disabled]="confirmed()">
-          @if (confirmed()) {
-            <app-icon name="checkmark-outline" [size]="15" /> Location confirmed
-          } @else {
-            Confirm location
-          }
-        </button>
+        @if (!readonly()) {
+          <button type="button" class="btn btn-sm" (click)="confirm()" [disabled]="confirmed()">
+            @if (confirmed()) {
+              <app-icon name="checkmark-outline" [size]="15" /> Location confirmed
+            } @else {
+              Confirm location
+            }
+          </button>
+        }
       </div>
     </div>
   `,
@@ -465,6 +470,17 @@ export class MapPickerComponent {
   readonly longitude = input<number | null>(null);
   /** Seeds the search box the first time a shop has no coordinates yet. */
   readonly addressHint = input<string>('');
+
+  /**
+   * Show the map without the controls that place a pin (Onboarding §14).
+   *
+   * For a reviewer looking at where a seller's pin actually landed. They can
+   * still pan and zoom - that is how you tell a shopfront from a field - but
+   * searching, locating and confirming are gone, because none of them would
+   * change anything and a Confirm button that does nothing is worse than no
+   * button at all.
+   */
+  readonly readonly = input(false);
 
   readonly picked = output<PickedLocation>();
   /**

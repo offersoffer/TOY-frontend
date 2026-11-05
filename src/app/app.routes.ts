@@ -365,6 +365,28 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/shop-manage.component').then((m) => m.ShopManageComponent),
       },
+      // Seller Management → Registrations (Onboarding §14). A sibling of
+      // `shops` rather than a child: these are shops that are not live yet
+      // and may never be, and the question being asked about them is whether
+      // the business is real - not how to edit it.
+      {
+        path: 'registrations',
+        title: 'Seller registrations · OffersOffer',
+        canActivate: [permissionGuard(PERMISSIONS.REVIEW_SELLER_REGISTRATIONS)],
+        loadComponent: () =>
+          import('./features/admin/registration-manage.component').then(
+            (m) => m.RegistrationManageComponent,
+          ),
+      },
+      {
+        path: 'registrations/:id',
+        title: 'Registration · OffersOffer',
+        canActivate: [permissionGuard(PERMISSIONS.REVIEW_SELLER_REGISTRATIONS)],
+        loadComponent: () =>
+          import('./features/admin/registration-detail.component').then(
+            (m) => m.RegistrationDetailComponent,
+          ),
+      },
       {
         path: 'shops/new',
         title: 'Create a shop · OffersOffer',

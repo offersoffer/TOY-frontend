@@ -1,4 +1,6 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged, filter, map, switchMap } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -8,9 +10,11 @@ import { AuthService } from '../../core/auth.service';
 import { ToastService } from '../../core/toast.service';
 import { SeoService } from '../../core/seo.service';
 import {
+  DuplicateCandidate,
   OnboardingService,
   Registration,
   RegistrationPayload,
+  ShopClaim,
 } from '../../core/onboarding.service';
 import { Category, LocationSource } from '../../core/models';
 import { StepperComponent, WizardStep } from '../../shared/stepper.component';
@@ -154,6 +158,54 @@ import { IconComponent } from '../../shared/icon.component';
         width: auto;
       }
 
+      /* §16: the "is this already your shop?" panel on the details step. */
+      .duplicates {
+        border: 1px solid var(--info);
+        background: var(--info-bg);
+        border-radius: var(--radius-sm);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      .duplicates.sent {
+        border-color: var(--success);
+        background: var(--success-bg);
+      }
+      .duplicates .lead {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0 0 0.3rem;
+        font-weight: 700;
+      }
+      .duplicates ul {
+        list-style: none;
+        margin: 0.9rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.5rem;
+      }
+      .duplicates li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 0.6rem 0.8rem;
+      }
+      .duplicates .who {
+        display: grid;
+        gap: 0.1rem;
+        min-width: 0;
+      }
+      .claim-form {
+        margin-top: 0.9rem;
+        padding-top: 0.9rem;
+        border-top: 1px solid var(--border);
+      }
+
       .status-card {
         text-align: center;
         padding: 2.5rem 1.5rem;
@@ -207,6 +259,7 @@ export class SellerOnboardingComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly seo = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly auth = inject(AuthService);
 
   readonly steps: WizardStep[] = [
@@ -228,6 +281,13 @@ export class SellerOnboardingComponent implements OnInit {
   readonly categories = signal<Category[]>([]);
   readonly selectedCategories = signal<number[]>([]);
   readonly acceptedTerms = signal(false);
+
+  /** §16: shops we already have that might be the one being registered. */
+  readonly duplicates = signal<DuplicateCandidate[]>([]);
+  readonly claiming = signal<DuplicateCandidate | null>(null);
+  readonly claimReason = signal('');
+  readonly claimSending = signal(false);
+  readonly claimed = signal<ShopClaim | null>(null);
 
   /** Where the pin came from and whether the seller confirmed it (§7). */
   private locationSource: LocationSource = 'MANUAL';
@@ -304,6 +364,34 @@ export class SellerOnboardingComponent implements OnInit {
       error: () => this.categories.set([]),
     });
 
+    /**
+     * §16: look for a shop we already have as the seller types the name.
+     *
+     * Debounced and switched, so a name typed letter by letter costs one
+     * search rather than one per keystroke, and a slow earlier answer cannot
+     * arrive after a later one and overwrite it.
+     */
+    this.shopForm.controls.name.valueChanges
+      .pipe(
+        debounceTime(500),
+        map((name) => (name ?? '').trim()),
+        distinctUntilChanged(),
+        filter((name) => name.length >= 3 && !this.registration()),
+        switchMap((name) =>
+          this.onboarding.duplicates({
+            name,
+            contactNumber: this.contactForm.getRawValue().contactNumber,
+          }),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (matches) => this.duplicates.set(matches),
+        // A failed duplicate check must never block the registration: it is
+        // a helpful suggestion, not a gate.
+        error: () => this.duplicates.set([]),
+      });
+
     // §4: resume whatever is in flight rather than starting a second one.
     this.onboarding.mine().subscribe({
       next: (registrations) => {
@@ -350,6 +438,36 @@ export class SellerOnboardingComponent implements OnInit {
     const resumeAt = !r.address?.address ? 2 : this.steps.length - 1;
     this.step.set(resumeAt);
     this.furthest.set(resumeAt);
+  }
+
+  /** §16 step 3: the seller recognised their own shop. */
+  startClaim(candidate: DuplicateCandidate): void {
+    this.claiming.set(candidate);
+    this.claimReason.set('');
+  }
+
+  sendClaim(): void {
+    const candidate = this.claiming();
+    const reason = this.claimReason().trim();
+    if (!candidate || reason.length < 20) return;
+
+    this.claimSending.set(true);
+    this.onboarding
+      .claimShop(candidate.shopId, reason, this.contactForm.getRawValue().contactNumber)
+      .subscribe({
+        next: (claim) => {
+          this.claimSending.set(false);
+          this.claiming.set(null);
+          this.claimed.set(claim);
+          this.toast.success('Request sent. We will let you know what our team decides.');
+        },
+        error: (err) => {
+          this.claimSending.set(false);
+          this.toast.error(
+            err?.error?.error?.message ?? 'We could not send that request. Please try again.',
+          );
+        },
+      });
   }
 
   toggleCategory(id: number): void {

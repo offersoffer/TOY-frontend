@@ -378,6 +378,15 @@ export const routes: Routes = [
             (m) => m.RegistrationManageComponent,
           ),
       },
+      // §16: requests to manage a shop we already have. Before the `:id`
+      // route, or Angular would read "claims" as a registration id.
+      {
+        path: 'registrations/claims',
+        title: 'Shop claims · OffersOffer',
+        canActivate: [permissionGuard(PERMISSIONS.REVIEW_SELLER_REGISTRATIONS)],
+        loadComponent: () =>
+          import('./features/admin/claim-manage.component').then((m) => m.ClaimManageComponent),
+      },
       {
         path: 'registrations/:id',
         title: 'Registration · OffersOffer',

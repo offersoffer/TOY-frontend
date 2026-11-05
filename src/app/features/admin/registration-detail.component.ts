@@ -192,6 +192,39 @@ type Decision = 'approve' | 'request-info' | 'reject' | 'suspend' | 'reactivate'
               </div>
             </section>
 
+            <!--
+              §14, §16: other shops that look like this one. A warning, never
+              a verdict - §16 is explicit that a name match is not identity
+              and nothing here merges anything.
+            -->
+            @if (r.duplicates.length) {
+              <section class="card">
+                <div class="card-body">
+                  <h2>Possible duplicates</h2>
+                  <p class="small muted">
+                    These look similar. Check before approving — if this seller is registering a
+                    shop we already have, the claim flow is the right route, not a second listing.
+                  </p>
+                  <ul class="dupes">
+                    @for (dupe of r.duplicates; track dupe.shopId) {
+                      <li>
+                        <div>
+                          <a [routerLink]="['/admin/registrations', dupe.shopId]">{{ dupe.name }}</a>
+                          <span class="small muted d-block">
+                            {{ dupe.city || 'Location unknown' }}@if (dupe.pincode) {
+                              · {{ dupe.pincode }}
+                            }
+                            · matched on {{ dupe.matchedOn.join(', ') }}
+                          </span>
+                        </div>
+                        <app-verification-badge [status]="dupe.verificationStatus" />
+                      </li>
+                    }
+                  </ul>
+                </div>
+              </section>
+            }
+
             <section class="card">
               <div class="card-body">
                 <h2>Review history</h2>
@@ -433,6 +466,24 @@ type Decision = 'approve' | 'request-info' | 'reject' | 'suspend' | 'reactivate'
       .coords {
         margin-top: 0.5rem;
         font-variant-numeric: tabular-nums;
+      }
+
+      .dupes {
+        list-style: none;
+        margin: 0.75rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.5rem;
+      }
+      .dupes li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 0.55rem 0.75rem;
       }
 
       .history {

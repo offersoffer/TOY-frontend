@@ -257,6 +257,12 @@ export class AdminShellComponent {
       permissions: [PERMISSIONS.REVIEW_SELLER_REGISTRATIONS],
     },
     {
+      label: 'Shop claims',
+      route: '/admin/registrations/claims',
+      icon: 'key-outline',
+      permissions: [PERMISSIONS.REVIEW_SELLER_REGISTRATIONS],
+    },
+    {
       label: 'Shops',
       route: '/admin/shops',
       icon: 'storefront-outline',

@@ -117,6 +117,98 @@
           <!-- 2 ------------------------------------------------------------ -->
           @case ('shop') {
             <h2>Shop details</h2>
+
+            <!--
+              §16: before a second copy of a shop gets created. Shown here
+              rather than as a step of its own, because the only thing that
+              makes the search useful is the shop's name, and this is where
+              the seller types it.
+            -->
+            @if (duplicates().length && !claimed()) {
+              <div class="duplicates" role="status">
+                <p class="lead">
+                  <app-icon name="information-circle-outline" [size]="17" />
+                  We may already have your shop
+                </p>
+                <p class="small muted">
+                  If one of these is yours, ask for access instead of creating a second listing —
+                  you keep the reviews and offers already on it.
+                </p>
+
+                <ul>
+                  @for (candidate of duplicates(); track candidate.shopId) {
+                    <li>
+                      <div class="who">
+                        <strong>{{ candidate.name }}</strong>
+                        <span class="small muted">
+                          {{ candidate.city || 'Location unknown' }}@if (candidate.pincode) {
+                            · {{ candidate.pincode }}
+                          }
+                          · matched on {{ candidate.matchedOn.join(', ') }}
+                        </span>
+                      </div>
+
+                      @if (candidate.alreadyYours) {
+                        <span class="small muted">You already manage this</span>
+                      } @else if (candidate.claimPending) {
+                        <span class="small muted">Request already sent</span>
+                      } @else {
+                        <button
+                          type="button"
+                          class="btn btn-secondary btn-sm"
+                          (click)="startClaim(candidate)"
+                        >
+                          This is my shop
+                        </button>
+                      }
+                    </li>
+                  }
+                </ul>
+
+                @if (claiming(); as candidate) {
+                  <div class="claim-form">
+                    <label class="field">
+                      <span>How is {{ candidate.name }} yours? *</span>
+                      <textarea
+                        rows="3"
+                        [value]="claimReason()"
+                        (input)="claimReason.set($any($event.target).value)"
+                        placeholder="e.g. I am the owner. The shop has been in my family since 1998 and I have the GST certificate."
+                      ></textarea>
+                      <span class="hint">
+                        Our team reads this and checks before giving anyone access. Nothing changes
+                        until they do.
+                      </span>
+                    </label>
+                    <div class="row">
+                      <button
+                        type="button"
+                        class="btn btn-sm"
+                        [disabled]="claimReason().trim().length < 20 || claimSending()"
+                        (click)="sendClaim()"
+                      >
+                        {{ claimSending() ? 'Sending…' : 'Send the request' }}
+                      </button>
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="claiming.set(null)">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else if (claimed(); as claim) {
+              <div class="duplicates sent" role="status">
+                <p class="lead">
+                  <app-icon name="checkmark-circle-outline" [size]="17" />
+                  We have your request for {{ claim.shopName }}
+                </p>
+                <p class="small">
+                  Our team will check it and let you know. You do not have access to that shop yet,
+                  and you can keep filling this in if you would rather register a new one.
+                </p>
+              </div>
+            }
+
             <form [formGroup]="shopForm" novalidate>
               <div class="field">
                 <label for="name">Shop name *</label>

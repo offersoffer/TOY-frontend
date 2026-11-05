@@ -39,12 +39,40 @@ export interface ReviewHistoryEntry {
   by: { id: number; name: string } | null;
 }
 
+/** A shop that looks like this one (§14, §16). The reviewer's view sees in-flight ones. */
+export interface DuplicateWarning {
+  shopId: number;
+  name: string;
+  slug: string;
+  city: string | null;
+  pincode: string | null;
+  registrationSource: string | null;
+  verificationStatus: VerificationStatus | null;
+  status: 'active' | 'inactive';
+  matchedOn: string[];
+}
+
+export interface ReviewClaim {
+  id: number;
+  shopId: number;
+  shopName: string;
+  shopSlug: string;
+  reason: string;
+  contactPhone: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+  decisionReason: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  requester?: { id: number; name: string; email: string };
+}
+
 export interface RegistrationDetail extends Registration {
   listingStatus: 'active' | 'inactive';
   owner: { id: number; name: string; email: string; phone: string | null } | null;
   members: { id: number; name: string; email: string; designation: string | null }[];
   reviewer: { id: number; name: string; email: string } | null;
   history: ReviewHistoryEntry[];
+  duplicates: DuplicateWarning[];
 }
 
 export interface RegistrationQuery {
@@ -134,6 +162,41 @@ export class RegistrationReviewService {
   setListing(shopId: number, status: 'active' | 'inactive'): Observable<RegistrationDetail> {
     return this.http
       .put<Envelope<RegistrationDetail>>(`${this.base}/${shopId}/listing`, { status })
+      .pipe(map((response) => response.data));
+  }
+
+  // ---- Claims on shops we already have (§16) -------------------------------
+
+  listClaims(query: { status?: string; page?: number; limit?: number } = {}): Observable<Page<ReviewClaim>> {
+    let params = new HttpParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
+    }
+    return this.http
+      .get<Envelope<ReviewClaim[]>>(`${this.base}/claims`, { params })
+      .pipe(
+        map((response) => ({
+          items: response.data,
+          meta: response.meta ?? {
+            page: 1,
+            limit: response.data.length,
+            total: response.data.length,
+            totalPages: 1,
+            hasNext: false,
+          },
+        })),
+      );
+  }
+
+  approveClaim(id: number): Observable<ReviewClaim> {
+    return this.http
+      .post<Envelope<ReviewClaim>>(`${this.base}/claims/${id}/approve`, {})
+      .pipe(map((response) => response.data));
+  }
+
+  rejectClaim(id: number, reason: string): Observable<ReviewClaim> {
+    return this.http
+      .post<Envelope<ReviewClaim>>(`${this.base}/claims/${id}/reject`, { reason })
       .pipe(map((response) => response.data));
   }
 

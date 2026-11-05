@@ -68,6 +68,11 @@
       }
       @if (auth.canAccessAdmin()) {
         <a routerLink="/admin/dashboard" routerLinkActive="active" class="admin-link">Dashboard</a>
+      } @else {
+        <!-- Onboarding §2. Shown only to people who do not already run a shop:
+             a merchant who has one wants Dashboard, and offering them "list
+             your business" beside it reads as though we have lost theirs. -->
+        <a routerLink="/sell/register" routerLinkActive="active">List your business</a>
       }
 
       <a class="nav-help" routerLink="/support" routerLinkActive="active">Help</a>
@@ -211,6 +216,7 @@
           <a routerLink="/about">About us</a>
           <a routerLink="/support">Support</a>
           <a routerLink="/contact">Contact us</a>
+          <a routerLink="/sell/register">List your business</a>
           <a routerLink="/privacy">Privacy Policy</a>
           <a routerLink="/terms">Terms &amp; Conditions</a>
           <a routerLink="/delete-account">Delete your account</a>

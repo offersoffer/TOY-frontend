@@ -1,0 +1,398 @@
+<div class="container page wizard">
+  @if (loading()) {
+    <div class="skeleton" style="height: 420px"></div>
+  } @else if (showStatus()) {
+    <!-- §12: once submitted, the wizard gives way to a status the seller can
+         act on, which says plainly what they can and cannot do yet. -->
+    @if (registration(); as r) {
+      <div class="card status-card">
+        @switch (r.verificationStatus) {
+          @case ('PENDING_VERIFICATION') {
+            <app-icon name="time-outline" [size]="40" />
+            <p class="big">Your shop registration has been submitted</p>
+            <p class="muted">
+              Status: <strong>Pending verification</strong>. We will let you know when the review is
+              complete.
+            </p>
+          }
+          @case ('ADDITIONAL_INFO_REQUIRED') {
+            <app-icon name="alert-circle-outline" [size]="40" />
+            <p class="big">We need a little more information</p>
+            <p>{{ r.decisionReason }}</p>
+          }
+          @case ('REJECTED') {
+            <app-icon name="close-outline" [size]="40" />
+            <p class="big">Your registration was not approved</p>
+            <p>{{ r.decisionReason }}</p>
+          }
+          @case ('SUSPENDED') {
+            <app-icon name="ban-outline" [size]="40" />
+            <p class="big">This shop is suspended</p>
+            <p>{{ r.decisionReason }}</p>
+          }
+          @default {
+            <app-icon name="checkmark-circle-outline" [size]="40" />
+            <p class="big">{{ r.name }} is verified</p>
+            <p class="muted">You can now manage your shop, offers and services.</p>
+          }
+        }
+
+        @if (r.verificationStatus === 'PENDING_VERIFICATION') {
+          <div class="status-lists">
+            <div>
+              <strong>You can</strong>
+              <ul>
+                <li>View and update permitted shop details</li>
+                <li>Prepare offer and service drafts</li>
+                <li>Review your registration information</li>
+              </ul>
+            </div>
+            <div>
+              <strong>You cannot yet</strong>
+              <ul>
+                <li>Publish public offers or services</li>
+                <li>Receive customer claims or bookings</li>
+                <li>Appear in public search or Near Me results</li>
+              </ul>
+            </div>
+          </div>
+        }
+
+        <p style="margin-top: 1.75rem">
+          <a routerLink="/admin" class="btn">Go to my dashboard</a>
+        </p>
+      </div>
+    }
+  } @else {
+    <div class="page-header">
+      <div>
+        <h1>Register your shop</h1>
+        <p class="subtitle">
+          Free to start. Tell us about your business and we will review it, usually within a few
+          working days.
+        </p>
+      </div>
+    </div>
+
+    <app-stepper
+      [steps]="steps"
+      [current]="step()"
+      [furthest]="furthest()"
+      (stepSelected)="goTo($event)"
+    />
+
+    @if (error()) {
+      <div class="alert" role="alert" style="margin-top: 1rem">{{ error() }}</div>
+    }
+
+    <div class="card step-body">
+      <div class="card-body">
+        @switch (stepKey()) {
+          <!-- 1 ------------------------------------------------------------ -->
+          @case ('contact') {
+            <h2>Your details</h2>
+            <p class="muted small">
+              You are signed in as <strong>{{ auth.user()?.name }}</strong> ({{ auth.user()?.email }}).
+              We will use this account to manage your shop.
+            </p>
+
+            <form [formGroup]="contactForm" novalidate>
+              <div class="field">
+                <label for="contactNumber">Shop contact number *</label>
+                <input
+                  id="contactNumber"
+                  type="tel"
+                  formControlName="contactNumber"
+                  placeholder="+91 98765 43210"
+                  autocomplete="tel"
+                />
+                <span class="hint">The number customers should call. It can differ from yours.</span>
+                @if (fieldError('contact', 'contactNumber', 'Contact number'); as message) {
+                  <span class="error-text">{{ message }}</span>
+                }
+              </div>
+            </form>
+          }
+
+          <!-- 2 ------------------------------------------------------------ -->
+          @case ('shop') {
+            <h2>Shop details</h2>
+            <form [formGroup]="shopForm" novalidate>
+              <div class="field">
+                <label for="name">Shop name *</label>
+                <input id="name" type="text" formControlName="name" />
+                @if (fieldError('shop', 'name', 'Shop name'); as message) {
+                  <span class="error-text">{{ message }}</span>
+                }
+              </div>
+
+              <div class="field">
+                <label for="description">What do you sell? *</label>
+                <textarea
+                  id="description"
+                  formControlName="description"
+                  rows="3"
+                  placeholder="Kanchipuram and soft silk sarees, bridal collections and daily wear."
+                ></textarea>
+                @if (fieldError('shop', 'description', 'Description'); as message) {
+                  <span class="error-text">{{ message }}</span>
+                }
+              </div>
+
+              <div class="field">
+                <span class="label" id="cat-label">Business category *</span>
+                <div class="category-grid" role="group" aria-labelledby="cat-label">
+                  @for (category of categories(); track category.id) {
+                    <button
+                      type="button"
+                      [attr.aria-pressed]="selectedCategories().includes(category.id)"
+                      (click)="toggleCategory(category.id)"
+                    >
+                      {{ category.name }}
+                    </button>
+                  }
+                </div>
+                @if (!selectedCategories().length) {
+                  <span class="hint">Choose at least one.</span>
+                }
+              </div>
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="email">Shop email</label>
+                  <input id="email" type="email" formControlName="email" />
+                  @if (fieldError('shop', 'email', 'Email'); as message) {
+                    <span class="error-text">{{ message }}</span>
+                  }
+                </div>
+                <div class="field">
+                  <label for="websiteUrl">Website or social link</label>
+                  <input id="websiteUrl" type="url" formControlName="websiteUrl" />
+                </div>
+              </div>
+            </form>
+          }
+
+          <!-- 3 ------------------------------------------------------------ -->
+          @case ('location') {
+            <h2>Where is your shop?</h2>
+            <p class="muted small">
+              Customers find you by how close you are, so this is the step that matters most.
+            </p>
+
+            <form [formGroup]="addressForm" novalidate>
+              <div class="field">
+                <label for="address">Street address *</label>
+                <input id="address" type="text" formControlName="address" autocomplete="street-address" />
+                @if (fieldError('address', 'address', 'Street address'); as message) {
+                  <span class="error-text">{{ message }}</span>
+                }
+              </div>
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="area">Area or locality</label>
+                  <input id="area" type="text" formControlName="area" />
+                </div>
+                <div class="field">
+                  <label for="city">City or town *</label>
+                  <input id="city" type="text" formControlName="city" />
+                  @if (fieldError('address', 'city', 'City'); as message) {
+                    <span class="error-text">{{ message }}</span>
+                  }
+                </div>
+                <div class="field">
+                  <label for="state">State *</label>
+                  <input id="state" type="text" formControlName="state" />
+                  @if (fieldError('address', 'state', 'State'); as message) {
+                    <span class="error-text">{{ message }}</span>
+                  }
+                </div>
+                <div class="field">
+                  <label for="pincode">Pincode *</label>
+                  <input id="pincode" type="text" inputmode="numeric" formControlName="pincode" />
+                  @if (fieldError('address', 'pincode', 'Pincode'); as message) {
+                    <span class="error-text">{{ message }}</span>
+                  }
+                </div>
+              </div>
+            </form>
+
+            <!-- §7: selected and confirmed are different things, and the UI
+                 must never show the second before the seller has done it. -->
+            <div
+              class="loc-state"
+              [class.not-selected]="locationState() === 'NOT_SELECTED'"
+              [class.selected]="locationState() === 'PIN_SELECTED_NOT_CONFIRMED'"
+              [class.confirmed]="locationState() === 'CONFIRMED'"
+              role="status"
+            >
+              @switch (locationState()) {
+                @case ('CONFIRMED') {
+                  <app-icon name="checkmark-circle-outline" [size]="18" />
+                  <span>Location confirmed</span>
+                }
+                @case ('PIN_SELECTED_NOT_CONFIRMED') {
+                  <app-icon name="alert-circle-outline" [size]="18" />
+                  <span>Pin placed — press <strong>Confirm shop location</strong> on the map below</span>
+                }
+                @default {
+                  <app-icon name="location-outline" [size]="18" />
+                  <span>No location selected yet. Search for your address or drag the pin.</span>
+                }
+              }
+            </div>
+
+            <app-map-picker
+              [latitude]="latitude()"
+              [longitude]="longitude()"
+              [addressHint]="addressHint()"
+              (picked)="onPicked($event)"
+            />
+
+            <p class="hint" style="margin-top: 0.75rem">
+              You never need to type latitude or longitude. Searching, dragging the pin, or using
+              your current location all work — and you can keep going without granting location
+              permission.
+            </p>
+          }
+
+          <!-- 4 ------------------------------------------------------------ -->
+          @case ('verification') {
+            <h2>Business verification <span class="muted small">(optional)</span></h2>
+            <p class="muted small">
+              Anything here helps us verify your shop faster. None of it is required — plenty of
+              small businesses have none of these, and that is fine. Only our review team can see
+              what you enter.
+            </p>
+
+            <form [formGroup]="verificationForm" novalidate>
+              <div class="field">
+                <label for="gstin">GSTIN</label>
+                <input id="gstin" type="text" formControlName="gstin" placeholder="33AABCU9603R1ZX" />
+                <span class="hint">Only if your business is GST registered.</span>
+              </div>
+              <div class="field">
+                <label for="googleBusinessUrl">Google Business Profile link</label>
+                <input id="googleBusinessUrl" type="url" formControlName="googleBusinessUrl" />
+              </div>
+              <div class="field">
+                <label for="businessRegistrationNumber">Business registration number</label>
+                <input
+                  id="businessRegistrationNumber"
+                  type="text"
+                  formControlName="businessRegistrationNumber"
+                />
+              </div>
+            </form>
+          }
+
+          <!-- 5 ------------------------------------------------------------ -->
+          @case ('listings') {
+            <h2>Your first offer <span class="muted small">(optional)</span></h2>
+            <p>
+              You can add offers and services at any time from your dashboard. Nothing you create
+              goes public until your shop is verified, so there is no rush to do it now.
+            </p>
+            <p class="muted small">
+              Most shopkeepers find it easier to finish registering first, then add offers with the
+              full editor — it has image upload and scheduling, which this step does not.
+            </p>
+          }
+
+          <!-- 6 ------------------------------------------------------------ -->
+          @case ('review') {
+            <h2>Review and submit</h2>
+            <div class="review">
+              <h3>Your details</h3>
+              <dl>
+                <dt>Account</dt>
+                <dd>{{ auth.user()?.name }} · {{ auth.user()?.email }}</dd>
+                <dt>Shop contact</dt>
+                <dd>{{ contactForm.getRawValue().contactNumber }}</dd>
+              </dl>
+
+              <h3>Shop</h3>
+              <dl>
+                <dt>Name</dt>
+                <dd>{{ shopForm.getRawValue().name }}</dd>
+                <dt>Description</dt>
+                <dd>{{ shopForm.getRawValue().description }}</dd>
+                <dt>Categories</dt>
+                <dd>
+                  @for (id of selectedCategories(); track id) {
+                    {{ categoryName(id) }}@if (!$last) {, }
+                  }
+                </dd>
+              </dl>
+
+              <h3>Address</h3>
+              <dl>
+                <dt>Address</dt>
+                <dd>
+                  {{ addressForm.getRawValue().address }}@if (addressForm.getRawValue().area) {,
+                  {{ addressForm.getRawValue().area }}}<br />
+                  {{ addressForm.getRawValue().city }}, {{ addressForm.getRawValue().state }}
+                  {{ addressForm.getRawValue().pincode }}
+                </dd>
+                <dt>Map location</dt>
+                <dd>
+                  @if (locationReady()) {
+                    <span class="loc-state confirmed" style="display: inline-flex; margin: 0">
+                      <app-icon name="checkmark-circle-outline" [size]="16" />
+                      Confirmed
+                    </span>
+                  } @else {
+                    <span class="error-text">Not confirmed — go back to step 3</span>
+                  }
+                </dd>
+              </dl>
+            </div>
+
+            <label class="terms">
+              <input
+                type="checkbox"
+                [checked]="acceptedTerms()"
+                (change)="acceptedTerms.set(!acceptedTerms())"
+              />
+              <span>
+                I accept the <a routerLink="/terms" target="_blank">Terms &amp; Conditions</a> and
+                the <a routerLink="/privacy" target="_blank">Privacy Policy</a>, and confirm I am
+                authorised to register this business.
+              </span>
+            </label>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="wizard-actions">
+      @if (step() > 0) {
+        <button type="button" class="btn btn-ghost" (click)="back()">← Back</button>
+      }
+      <span class="spacer"></span>
+
+      @if (stepKey() === 'review') {
+        <button
+          type="button"
+          class="btn"
+          [disabled]="!acceptedTerms() || !locationReady() || submitting()"
+          (click)="submit()"
+        >
+          {{ submitting() ? 'Submitting…' : 'Submit for verification' }}
+        </button>
+      } @else {
+        <button type="button" class="btn" [disabled]="saving()" (click)="next()">
+          {{ saving() ? 'Saving…' : 'Save and continue' }}
+        </button>
+      }
+    </div>
+
+    @if (registration()) {
+      <p class="muted small" style="text-align: center; margin-top: 0.9rem">
+        <app-icon name="checkmark-outline" [size]="13" /> Saved. You can close this page and come
+        back later.
+      </p>
+    }
+  }
+</div>

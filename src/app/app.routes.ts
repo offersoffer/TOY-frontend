@@ -154,6 +154,20 @@ export const routes: Routes = [
     title: 'Terms & Conditions · OffersOffer',
     loadComponent: () => import('./features/pages/terms.component').then((m) => m.TermsComponent),
   },
+  // ---- Self-service seller onboarding (Onboarding §2) ---------------------
+  // Behind authGuard rather than open: §3 has the seller use an ordinary
+  // account, so the sign-in page is the front door and this is what they land
+  // on afterwards. The marketing page that explains it is public.
+  {
+    path: 'sell/register',
+    title: 'Register your shop · OffersOffer',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/seller/seller-onboarding.component').then(
+        (m) => m.SellerOnboardingComponent,
+      ),
+  },
+
   // Submitted to the Google Play Console as the app's "Data deletion" URL, so
   // this path is effectively permanent: changing it breaks a link Google holds
   // and re-triggers a policy review.

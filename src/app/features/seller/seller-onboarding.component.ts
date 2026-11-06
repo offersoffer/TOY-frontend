@@ -170,6 +170,10 @@ import { IconComponent } from '../../shared/icon.component';
         border-color: var(--success);
         background: var(--success-bg);
       }
+      .duplicates.pending {
+        border-color: var(--warning);
+        background: var(--warning-bg);
+      }
       .duplicates .lead {
         display: flex;
         align-items: center;
@@ -289,6 +293,16 @@ export class SellerOnboardingComponent implements OnInit {
   readonly claimSending = signal(false);
   readonly claimed = signal<ShopClaim | null>(null);
 
+  /**
+   * §16: requests this seller has already sent, so one they made yesterday is
+   * still visible today. Without this the request is write-only - the
+   * confirmation shows once and a seller who closes the tab has no way to
+   * tell whether anything is happening, which is the state that produces a
+   * second registration for the same shop.
+   */
+  readonly openClaims = signal<ShopClaim[]>([]);
+  readonly withdrawing = signal<number | null>(null);
+
   /** Where the pin came from and whether the seller confirmed it (§7). */
   private locationSource: LocationSource = 'MANUAL';
   private locationAccuracy: number | null = null;
@@ -392,6 +406,17 @@ export class SellerOnboardingComponent implements OnInit {
         error: () => this.duplicates.set([]),
       });
 
+    /*
+      §16: and whatever claim is already waiting on a reviewer. Only PENDING -
+      a decided claim is reported by notification, and an approved one shows
+      up as a shop the seller can manage, so repeating it here would leave
+      the seller looking at a list that never empties.
+    */
+    this.onboarding.myClaims().subscribe({
+      next: (claims) => this.openClaims.set(claims.filter((c) => c.status === 'PENDING')),
+      error: () => this.openClaims.set([]),
+    });
+
     // §4: resume whatever is in flight rather than starting a second one.
     this.onboarding.mine().subscribe({
       next: (registrations) => {
@@ -440,6 +465,28 @@ export class SellerOnboardingComponent implements OnInit {
     this.furthest.set(resumeAt);
   }
 
+  /**
+   * §16: the seller changed their mind before a reviewer got to it.
+   *
+   * Withdrawing is the seller's own record only - it removes nothing from the
+   * shop and grants nothing, so there is no confirmation prompt.
+   */
+  withdrawClaim(claim: ShopClaim): void {
+    this.withdrawing.set(claim.id);
+    this.onboarding.withdrawClaim(claim.id).subscribe({
+      next: () => {
+        this.withdrawing.set(null);
+        this.openClaims.update((claims) => claims.filter((c) => c.id !== claim.id));
+        if (this.claimed()?.id === claim.id) this.claimed.set(null);
+        this.toast.success(`Your request for ${claim.shopName} has been withdrawn.`);
+      },
+      error: () => {
+        this.withdrawing.set(null);
+        this.toast.error('We could not withdraw that request. Please try again.');
+      },
+    });
+  }
+
   /** §16 step 3: the seller recognised their own shop. */
   startClaim(candidate: DuplicateCandidate): void {
     this.claiming.set(candidate);
@@ -459,6 +506,8 @@ export class SellerOnboardingComponent implements OnInit {
           this.claimSending.set(false);
           this.claiming.set(null);
           this.claimed.set(claim);
+          // So it is still listed if the seller comes back to this page.
+          this.openClaims.update((claims) => [claim, ...claims.filter((c) => c.id !== claim.id)]);
           this.toast.success('Request sent. We will let you know what our team decides.');
         },
         error: (err) => {

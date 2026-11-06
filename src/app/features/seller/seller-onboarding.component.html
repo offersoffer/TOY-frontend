@@ -85,6 +85,44 @@
       <div class="alert" role="alert" style="margin-top: 1rem">{{ error() }}</div>
     }
 
+    <!--
+      §16: requests already waiting on a reviewer. Above the wizard rather
+      than inside the details step, because its whole job is to be seen
+      before the seller starts typing the same shop in again.
+    -->
+    @if (openClaims().length) {
+      <div class="duplicates pending" role="status" style="margin-top: 1.5rem">
+        <p class="lead">
+          <app-icon name="time-outline" [size]="17" />
+          You have already asked to manage
+          {{ openClaims().length === 1 ? 'a shop' : openClaims().length + ' shops' }}
+        </p>
+        <p class="small">
+          Our team is checking {{ openClaims().length === 1 ? 'it' : 'them' }}. You do not have
+          access yet. Carry on below only if you want to register a different shop.
+        </p>
+
+        <ul>
+          @for (claim of openClaims(); track claim.id) {
+            <li>
+              <span class="who">
+                <strong>{{ claim.shopName }}</strong>
+                <span class="muted small">Requested {{ claim.createdAt | date: 'd MMM y' }}</span>
+              </span>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                [disabled]="withdrawing() === claim.id"
+                (click)="withdrawClaim(claim)"
+              >
+                {{ withdrawing() === claim.id ? 'Withdrawing…' : 'Withdraw' }}
+              </button>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
     <div class="card step-body">
       <div class="card-body">
         @switch (stepKey()) {

@@ -545,7 +545,18 @@ main {
    horizontal scrollbar on every page. The footer carries it at every width.
    Same reasoning as `.nav-help` below. */
 @media (min-width: 961px) and (max-width: 1219px) {
-  .nav-sell {
+  /* `.nav-account-dup` is Favourites and Following, which signing in adds to
+     the row. Holding a shop adds Dashboard on top, and the three together push
+     the notification bell and the avatar clean off the right edge - 187px off
+     at 970px, still 133px off at 1024px - so every admin page opened with a
+     horizontal scrollbar and the account menu out of reach until you scrolled
+     to it. Dashboard stays, because it is where a shopkeeper is going; these
+     two go, because the account menu already carries them as "Saved offers"
+     and "Following". Same trade as `.nav-sell`, and the reason they share a
+     rule: hidden only where they do not fit, never the only way to reach the
+     page. Measured at 961/970/1000/1024/1100/1150/1220. */
+  .nav-sell,
+  .nav-account-dup {
     display: none;
   }
 }

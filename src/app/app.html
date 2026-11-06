@@ -63,8 +63,10 @@
       <a routerLink="/shops" routerLinkActive="active">Shops</a>
       <a routerLink="/nearby" routerLinkActive="active">Nearby</a>
       @if (auth.isAuthenticated()) {
-        <a routerLink="/favorites" routerLinkActive="active">Favourites</a>
-        <a routerLink="/following" routerLinkActive="active">Following</a>
+        <!-- Both are also in the account menu, which is why app.scss may drop
+             them from the row at the widths where it runs out of room. -->
+        <a class="nav-account-dup" routerLink="/favorites" routerLinkActive="active">Favourites</a>
+        <a class="nav-account-dup" routerLink="/following" routerLinkActive="active">Following</a>
       }
       @if (auth.canAccessAdmin()) {
         <a routerLink="/admin/dashboard" routerLinkActive="active" class="admin-link">Dashboard</a>

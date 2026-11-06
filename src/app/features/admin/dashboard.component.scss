@@ -135,6 +135,15 @@
   white-space: nowrap;
 }
 
+/* The timeline is one bar per day over a fixed 30-day window, so a label like
+   "7 Oct" gets the 22px a bar-group is wide and needs roughly 30. Every label
+   drawn therefore overlaps both its neighbours and the row reads as one smear
+   of digits. Every fifth keeps the month legible; the exact day was never only
+   here, it is on each bar's own tooltip. */
+.bar-group:not(:nth-child(5n + 1)) .bar-label {
+  display: none;
+}
+
 .legend {
   display: flex;
   gap: 1rem;

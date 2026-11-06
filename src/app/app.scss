@@ -536,6 +536,20 @@ main {
   }
 }
 
+/* Onboarding §2's entry point in the header.
+   Hidden only in the band where it does not fit. Below 961px the header has
+   already collapsed to the menu, which has room for it; at 1220px and up so
+   does the header. Between the two the signed-in nav is the widest thing on
+   the page - it overflows by about 30px on its own, with Favourites and
+   Following beside the five browse links - and a 150px link turns that into a
+   horizontal scrollbar on every page. The footer carries it at every width.
+   Same reasoning as `.nav-help` below. */
+@media (min-width: 961px) and (max-width: 1219px) {
+  .nav-sell {
+    display: none;
+  }
+}
+
 /* Only ever shown inside the open mobile menu - see the media query above. */
 .nav-theme-toggle {
   display: none;

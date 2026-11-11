@@ -61,7 +61,18 @@ import { ConfirmComponent, EmptyStateComponent } from '../../shared/ui.component
                           }
                         </td>
                         <td class="small">{{ member.designation || '—' }}</td>
-                        <td class="small">{{ member.branchName || 'All branches' }}</td>
+                        <td class="small">
+                          @if (member.branchName) {
+                            {{ member.branchName }}
+                            @if (member.branchRestricted) {
+                              <br /><span class="badge badge-brand">Branch admin</span>
+                            } @else {
+                              <br /><span class="muted">Works here, runs the shop</span>
+                            }
+                          } @else {
+                            All branches
+                          }
+                        </td>
                         <td>
                           @if (member.roleName) {
                             <span class="badge badge-brand">{{ member.roleName }}</span>
@@ -152,6 +163,40 @@ import { ConfirmComponent, EmptyStateComponent } from '../../shared/ui.component
                         <option [ngValue]="branch.id">{{ branch.branchName }}</option>
                       }
                     </select>
+                    <span class="hint">
+                      Where this person works. On its own this only decides which counter they may
+                      redeem claims at — it does not limit anything else.
+                    </span>
+                  </div>
+
+                  <!--
+                    Confinement is a separate, deliberate choice from being
+                    attached to a branch. Those two were one field until it
+                    became clear that every member a merchant had casually
+                    attached to a branch would have lost their shop-wide
+                    powers the day it shipped.
+                  -->
+                  <div class="field">
+                    <label class="checkbox">
+                      <!--
+                        Disabled through the control rather than the
+                        attribute: with a reactive form the value accessor
+                        owns the element's disabled state, so an
+                        attr.disabled binding renders and is then ignored -
+                        the box looked greyed out and stayed clickable.
+                      -->
+                      <input type="checkbox" formControlName="branchRestricted" />
+                      <span>Make them a branch admin</span>
+                    </label>
+                    @if (form.controls.branchId.value === null) {
+                      <span class="hint">Pick a branch first — there is nothing to confine them to.</span>
+                    } @else {
+                      <span class="hint">
+                        They will only see and manage this branch: its offers, its claims and its
+                        figures. Leave this off for someone who runs the whole shop from one of its
+                        branches.
+                      </span>
+                    }
                   </div>
 
                   <div class="field">
@@ -252,11 +297,19 @@ export class MemberManageComponent {
     phone: [''],
     designation: [''],
     branchId: [null as number | null],
+    branchRestricted: [false],
     roleId: [null as number | null],
     status: ['active' as 'active' | 'inactive'],
   });
 
   constructor() {
+    // A confinement with no branch confines nobody, so the two controls are
+    // kept honest together rather than left to disagree on screen.
+    this.syncBranchRestricted(this.form.controls.branchId.value);
+    this.form.controls.branchId.valueChanges.subscribe((branchId) =>
+      this.syncBranchRestricted(branchId),
+    );
+
     this.api.getShop(this.shopId).subscribe({ next: (shop) => this.shop.set(shop), error: () => undefined });
     this.api.listBranches(this.shopId).subscribe({
       next: (branches) => this.branches.set(branches),
@@ -289,6 +342,19 @@ export class MemberManageComponent {
     return errorFor(this.form.get(control), label);
   }
 
+  /** Keeps "branch admin" unavailable, and unticked, while no branch is named. */
+  private syncBranchRestricted(branchId: number | null): void {
+    const control = this.form.controls.branchRestricted;
+    if (branchId === null) {
+      if (control.value) control.setValue(false);
+      // `emitEvent: false` because nothing should treat this as the user
+      // changing their mind - they changed the branch.
+      control.disable({ emitEvent: false });
+      return;
+    }
+    control.enable({ emitEvent: false });
+  }
+
   startEdit(member: ShopMember): void {
     this.editingId.set(member.id);
     this.form.patchValue({
@@ -297,12 +363,19 @@ export class MemberManageComponent {
       roleId: member.roleId,
       status: member.status,
     });
+    // After the branch, and after the sync it triggers: a disabled control
+    // would otherwise swallow the value, and an enabled one set before the
+    // branch would be cleared by the sync.
+    this.syncBranchRestricted(member.branchId);
+    this.form.controls.branchRestricted.setValue(member.branchRestricted);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   cancelEdit(): void {
     this.editingId.set(null);
     this.form.reset({ status: 'active' });
+    // `reset` re-enables every control, so the toggle has to be put back.
+    this.syncBranchRestricted(this.form.controls.branchId.value);
   }
 
   save(): void {
@@ -319,6 +392,10 @@ export class MemberManageComponent {
     const payload: Record<string, unknown> = {
       designation: value.designation || null,
       branchId: value.branchId,
+      // The server ignores this without a branch, but sending a stale `true`
+      // from a form where the branch was just cleared would read as a bug the
+      // next time somebody looked at the row.
+      branchRestricted: value.branchId === null ? false : value.branchRestricted,
       roleId: value.roleId,
       status: value.status,
     };

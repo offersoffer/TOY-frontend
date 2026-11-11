@@ -324,11 +324,53 @@
                       <span>
                         <strong>{{ branch.branchName }}</strong>
                         <span class="small muted">{{ branch.city }}@if (branch.pincode) { – {{ branch.pincode }} }</span>
+                        @if (branch.status !== 'active') {
+                          <!--
+                            Not "incomplete": the gate never looks at an
+                            inactive branch, so listing its missing fields
+                            would send the merchant off to fix something that
+                            was never blocking them.
+                          -->
+                          <span class="small muted">Not trading</span>
+                        } @else if (branchBlockerCount(branch) > 0) {
+                          <!--
+                            Marked, not disabled. A draft may name an
+                            incomplete branch, and taking the option away
+                            would leave the merchant guessing why.
+                          -->
+                          <span class="small warn">Incomplete: {{ missingFor(branch) }}</span>
+                        }
                       </span>
                     </label>
                   }
                 </div>
               }
+            }
+
+            @if (incompleteBranches().length > 0) {
+              <!--
+                §18: a branch is what a customer travels to, so an offer
+                published against one with no address, no confirmed pin and
+                nobody to ring is an offer they cannot act on. Saving a draft
+                is unaffected - this only blocks going live.
+              -->
+              <div class="gate-notice">
+                <strong>These branches need completing before this offer can go live</strong>
+                <ul>
+                  @for (entry of incompleteBranches(); track entry.branch.id) {
+                    <li>
+                      <a [routerLink]="['/admin/shops', entry.branch.shopId, 'branches']">
+                        {{ entry.branch.branchName }}
+                      </a>
+                      — {{ missingFor(entry.branch) }}
+                    </li>
+                  }
+                </ul>
+                <span class="small muted">
+                  Open the branch and fill in the missing details, or set it inactive if it is not
+                  trading. You can still save this offer as a draft.
+                </span>
+              </div>
             }
           </fieldset>
 

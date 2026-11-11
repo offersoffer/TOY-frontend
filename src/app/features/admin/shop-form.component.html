@@ -256,6 +256,52 @@
               </div>
             </fieldset>
           }
+
+          <!--
+            §18: an offer only goes live at a branch a customer can actually
+            reach, so these belong on the form that creates the location
+            rather than on a screen the merchant has to be sent to afterwards.
+            The shop's own contact number above is for the business; this is
+            for this address.
+          -->
+          <fieldset>
+            <legend>Who a customer reaches here</legend>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="branchContactNumber">Number for this location</label>
+                <input id="branchContactNumber" type="tel" formControlName="branchContactNumber" />
+                <span class="hint">Leave empty to use the shop's number.</span>
+              </div>
+
+              <div class="field">
+                <label for="contactPersonName">Contact person</label>
+                <input
+                  id="contactPersonName"
+                  type="text"
+                  formControlName="contactPersonName"
+                  placeholder="e.g. R. Kavitha"
+                />
+              </div>
+
+              <div class="field">
+                <label for="contactPersonEmail">Contact person email</label>
+                <input
+                  id="contactPersonEmail"
+                  type="email"
+                  formControlName="contactPersonEmail"
+                  [class.invalid]="error('contactPersonEmail', 'Contact person email')"
+                />
+                @if (error('contactPersonEmail', 'Contact person email'); as message) {
+                  <span class="error-text">{{ message }}</span>
+                }
+              </div>
+            </div>
+
+            <span class="hint">
+              Needed before an offer can go live at this location. Saving without them is fine.
+            </span>
+          </fieldset>
         </div>
 
         <aside class="stack">

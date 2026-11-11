@@ -1,11 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
 import { ToastService } from '../../core/toast.service';
-import { Branch, LocationSource, Shop } from '../../core/models';
+import { Branch, BranchPublishBlocker, LocationSource, Shop } from '../../core/models';
 import { applyServerErrors, errorFor } from '../auth/auth-shell';
 import { IconComponent } from '../../shared/icon.component';
 import { MapPickerComponent, PickedLocation } from '../../shared/map-picker.component';
@@ -56,6 +56,7 @@ import { ConfirmComponent, EmptyStateComponent } from '../../shared/ui.component
                       <th>City</th>
                       <th>Coordinates</th>
                       <th>Offers</th>
+                      <th>Ready to publish</th>
                       <th>Status</th>
                       <th></th>
                     </tr>
@@ -85,6 +86,23 @@ import { ConfirmComponent, EmptyStateComponent } from '../../shared/ui.component
                           }
                         </td>
                         <td>{{ branch.offerCount ?? 0 }}</td>
+                        <td class="small">
+                          <!--
+                            The gate is on publishing, not on saving, so an
+                            incomplete branch is a warning and never an error:
+                            the merchant may have stopped halfway on purpose
+                            and offers already live here stay live.
+                          -->
+                          @if (branch.status !== 'active') {
+                            <span class="muted">Not trading</span>
+                          } @else if (blockers(branch).length === 0) {
+                            <span class="badge badge-success">Ready</span>
+                          } @else {
+                            <span class="badge badge-warning">Needs {{ blockers(branch).length }}</span>
+                            <br />
+                            <span class="muted">{{ missingList(branch) }}</span>
+                          }
+                        </td>
                         <td>
                           <span
                             class="badge"
@@ -128,6 +146,26 @@ import { ConfirmComponent, EmptyStateComponent } from '../../shared/ui.component
               <form [formGroup]="form" (ngSubmit)="save()" novalidate>
                 @if (formError()) {
                   <div class="error-text mb-2">{{ formError() }}</div>
+                }
+
+                @if (editingBlockers().length > 0) {
+                  <!--
+                    Said here rather than only at publish time, because the
+                    merchant is already in the form that fixes it. Still not a
+                    validation error: a half-finished branch saves fine.
+                  -->
+                  <div class="notice mb-2">
+                    <strong>Offers cannot go live at this branch yet.</strong>
+                    <ul>
+                      @for (blocker of editingBlockers(); track blocker.field) {
+                        <li>{{ blocker.label }}</li>
+                      }
+                    </ul>
+                    <span class="small muted">
+                      Fill these in, or set the branch inactive if it is not trading. Saving a
+                      half-finished branch is fine.
+                    </span>
+                  </div>
                 }
 
                 <div class="field">
@@ -211,6 +249,35 @@ import { ConfirmComponent, EmptyStateComponent } from '../../shared/ui.component
                   <input id="contactNumber" type="tel" formControlName="contactNumber" />
                 </div>
 
+                <!--
+                  The person a customer is put through to here, which is not
+                  necessarily whoever administers the branch - see the branch
+                  admin toggle on the members page.
+                -->
+                <div class="field">
+                  <label for="contactPersonName">Contact person</label>
+                  <input
+                    id="contactPersonName"
+                    type="text"
+                    formControlName="contactPersonName"
+                    placeholder="e.g. R. Kavitha"
+                  />
+                  <span class="hint">Who a customer asks for at this branch.</span>
+                </div>
+
+                <div class="field">
+                  <label for="contactPersonEmail">Contact person email</label>
+                  <input
+                    id="contactPersonEmail"
+                    type="email"
+                    formControlName="contactPersonEmail"
+                    [class.invalid]="error('contactPersonEmail', 'Contact person email')"
+                  />
+                  @if (error('contactPersonEmail', 'Contact person email'); as message) {
+                    <span class="error-text">{{ message }}</span>
+                  }
+                </div>
+
                 <div class="field">
                   <label for="status">Status</label>
                   <select id="status" formControlName="status">
@@ -286,6 +353,19 @@ import { ConfirmComponent, EmptyStateComponent } from '../../shared/ui.component
         white-space: nowrap;
       }
 
+      .notice {
+        padding: 0.65rem 0.75rem;
+        border-radius: var(--radius, 8px);
+        border: 1px solid var(--warning, #b58100);
+        background: color-mix(in srgb, var(--warning, #b58100) 10%, transparent);
+        font-size: 0.9rem;
+      }
+
+      .notice ul {
+        margin: 0.35rem 0;
+        padding-left: 1.1rem;
+      }
+
       @media (max-width: 960px) {
         .branch-layout {
           grid-template-columns: minmax(0, 1fr);
@@ -328,6 +408,11 @@ export class BranchManageComponent {
     latitude: [null as number | null],
     longitude: [null as number | null],
     contactNumber: [''],
+    contactPersonName: [''],
+    // Validated here only for shape. Whether it is *present* is the publish
+    // gate's business, not the form's, because saving a half-filled branch
+    // has to keep working.
+    contactPersonEmail: ['', [Validators.email]],
     isPrimary: [false],
     status: ['active' as 'active' | 'inactive'],
   });
@@ -355,6 +440,32 @@ export class BranchManageComponent {
     return errorFor(this.form.get(control), label);
   }
 
+  /**
+   * What the server says is still missing. Read from the response rather than
+   * re-derived here: the rule lives in one place, and a client copy of it
+   * would be the copy that goes stale.
+   */
+  blockers(branch: Branch): BranchPublishBlocker[] {
+    return branch.publishBlockers ?? [];
+  }
+
+  missingList(branch: Branch): string {
+    return this.blockers(branch)
+      .map((blocker) => blocker.label)
+      .join(', ');
+  }
+
+  /** The blockers on the branch currently open in the form, if any. */
+  readonly editingBlockers = computed<BranchPublishBlocker[]>(() => {
+    const id = this.editingId();
+    if (id === null) return [];
+    const branch = this.branches().find((item) => item.id === id);
+    // An inactive branch is never checked, which is the merchant's exit when
+    // they cannot complete one.
+    if (!branch || branch.status !== 'active') return [];
+    return this.blockers(branch);
+  });
+
   startEdit(branch: Branch): void {
     this.editingId.set(branch.id);
     this.form.patchValue({
@@ -369,6 +480,8 @@ export class BranchManageComponent {
       latitude: branch.latitude,
       longitude: branch.longitude,
       contactNumber: branch.contactNumber ?? '',
+      contactPersonName: branch.contactPersonName ?? '',
+      contactPersonEmail: branch.contactPersonEmail ?? '',
       isPrimary: branch.isPrimary,
       status: branch.status,
     });

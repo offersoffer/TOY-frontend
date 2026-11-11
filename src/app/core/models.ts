@@ -39,6 +39,8 @@ export interface ShopMembership {
   shopSlug: string;
   shopLogoUrl: string | null;
   branchId: number | null;
+  /** True when this membership confines the user to `branchId`. */
+  branchRestricted: boolean;
   designation: string | null;
   roleName: string | null;
   permissions: string[];
@@ -189,10 +191,38 @@ export interface Branch {
   placeId: string | null;
   openingHours: OpeningHours | null;
   contactNumber: string | null;
+  /**
+   * Who a customer is put through to at this branch, published on the branch.
+   *
+   * Deliberately not the same person as the branch's administrator: the
+   * counter supervisor may run the screen while the manager is who you ask
+   * for. Optional to save, required to publish - see `publishBlockers`.
+   */
+  contactPersonName: string | null;
+  contactPersonEmail: string | null;
   isPrimary: boolean;
   status: 'active' | 'inactive';
   offerCount?: number;
   distanceKm: number | null;
+  /**
+   * What is still missing before an offer may go live at this branch, as the
+   * server sees it. Empty for a complete branch, and absent on the public
+   * branch listings, which have no business knowing.
+   */
+  publishBlockers?: BranchPublishBlocker[];
+  readyToPublish?: boolean;
+}
+
+/**
+ * One unmet requirement from the publish gate.
+ *
+ * `field` is the form control it belongs to, so a client can point at the
+ * input rather than make the merchant hunt for it; `label` is what the
+ * merchant is told is missing.
+ */
+export interface BranchPublishBlocker {
+  field: string;
+  label: string;
 }
 
 /** A geocoder answer, as returned by `/geo/search` and `/geo/reverse`. */
@@ -269,6 +299,13 @@ export interface ShopMember {
   userStatus: string;
   branchId: number | null;
   branchName: string | null;
+  /**
+   * Whether `branchId` *confines* this member or merely records where they
+   * work. The two are not the same: a branch has always been recorded for
+   * staff who redeem at one counter, long before it meant anything about
+   * permissions, so confinement has to be asked for explicitly.
+   */
+  branchRestricted: boolean;
   roleId: number | null;
   roleName: string | null;
   designation: string | null;
@@ -580,8 +617,17 @@ export interface RedemptionSummary {
   pending: number;
   claimsTotal: number;
   redemptionsTotal: number;
-  /** Percentage, or null when nothing has been claimed yet. */
+  /**
+   * Percentage, or null when nothing has been claimed yet - and also null for
+   * a branch admin, whose claims and redemptions are not counted the same
+   * way. A redemption happened at one branch and says so; an unredeemed claim
+   * happened at none, so it is counted at every branch that could honour it.
+   * Dividing one into the other would report a rate that falls as a shop
+   * opens more branches, so the server withholds it instead.
+   */
   claimToRedemption: number | null;
+  /** True when these counters cover one branch rather than the whole shop. */
+  branchScoped: boolean;
 }
 
 export interface ClaimAuditEvent {
@@ -703,6 +749,17 @@ export interface AnalyticsOverview {
     totalFollows: number;
   };
   shop?: { branches: number; members: number };
+  /**
+   * Set when the caller runs a single branch, saying which figures are that
+   * branch's and which are the whole shop's.
+   *
+   * The offer *set* is the branch's - the offers that run there. The
+   * engagement counters are not, because a shop-wide offer has one view count
+   * for the whole shop: nothing records a feed impression per branch. Printing
+   * them as one branch's footfall would be a lie, so the server says so and
+   * the dashboard repeats it.
+   */
+  branchScope: BranchScopeNote | null;
 }
 
 export interface OfferStat {
@@ -727,6 +784,15 @@ export interface ShopAnalytics {
   engagement: AnalyticsOverview['engagement'];
   branches: { id: number; branchName: string; city: string | null; activeOffers: number; views: number }[];
   mostViewed: OfferStat[];
+  branchScope: BranchScopeNote | null;
+}
+
+export interface BranchScopeNote {
+  branches: { id: number; name: string }[];
+  /** Which of the two is the branch's own. */
+  offerSet: 'branch';
+  counters: 'shop';
+  note: string;
 }
 
 export interface CategoryStat {

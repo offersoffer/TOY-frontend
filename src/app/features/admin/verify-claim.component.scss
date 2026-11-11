@@ -296,3 +296,11 @@ dl {
     width: 100%;
   }
 }
+
+/* The counters above are narrowed to one counter, and not all in the same
+   way, so the screen says which is which rather than let a shopkeeper read a
+   shop-wide claim count as their own footfall. */
+.branch-note {
+  margin: 0.4rem 0 0;
+  text-align: center;
+}

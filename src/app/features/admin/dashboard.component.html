@@ -40,6 +40,22 @@
       }
     </div>
   } @else if (overview(); as o) {
+    @if (o.branchScope; as scope) {
+      <!--
+        A branch admin's dashboard is not their shop's dashboard, and the
+        difference is not uniform: the offers listed are the ones that run at
+        their branch, but a shop-wide offer's views belong to the whole shop
+        because nothing records a feed impression per branch. Said here rather
+        than left for them to assume.
+      -->
+      <div class="branch-note mb-2">
+        <strong>
+          {{ scope.branches.length === 1 ? scope.branches[0].name : 'Your branch' }}
+        </strong>
+        — {{ scope.note }}
+      </div>
+    }
+
     <!-- Headline counters -->
     <div class="grid grid-stats stagger mb-2">
       @if (o.platform; as p) {

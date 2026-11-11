@@ -22,6 +22,18 @@
         <div><strong>{{ today.claimToRedemption }}%</strong><span>Claim → redemption</span></div>
       }
     </div>
+    @if (today.branchScoped) {
+      <!--
+        "Claims today" is every claim your counter could honour, which
+        includes shop-wide ones that may be redeemed at a sibling branch
+        instead. "Redeemed today" is only yours. The two are not a ratio,
+        which is why the server does not send one.
+      -->
+      <p class="small muted branch-note">
+        Your branch. Claims counted here are the ones you could honour today;
+        redemptions are the ones you did.
+      </p>
+    }
   }
 
   @switch (stage()) {

@@ -282,3 +282,27 @@ fieldset {
   border-left: 3px solid var(--info);
   color: var(--text);
 }
+
+/* §18's publish gate. A warning rather than an error: the offer still saves
+   as a draft, and nothing already live against these branches is touched. */
+.gate-notice {
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--warning-bg);
+  border-left: 3px solid var(--warning);
+  color: var(--text);
+  font-size: 0.9rem;
+
+  ul {
+    margin: 0.35rem 0;
+    padding-left: 1.1rem;
+  }
+}
+
+/* Marks an incomplete branch inside the picker without taking the option away:
+   a draft may legitimately name one. */
+.branch-option .warn {
+  display: block;
+  color: var(--warning);
+}

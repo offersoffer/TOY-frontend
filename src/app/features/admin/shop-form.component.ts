@@ -192,6 +192,11 @@ export class ShopFormComponent {
     pincode: [''],
     latitude: [null as number | null],
     longitude: [null as number | null],
+    // This location's own contact details, as distinct from the business's.
+    // Required to publish an offer here, never to save (§18).
+    branchContactNumber: [''],
+    contactPersonName: [''],
+    contactPersonEmail: ['', [Validators.email]],
   });
 
   /**
@@ -287,6 +292,9 @@ export class ShopFormComponent {
       pincode: branch?.pincode ?? '',
       latitude: branch?.latitude ?? null,
       longitude: branch?.longitude ?? null,
+      branchContactNumber: branch?.contactNumber ?? '',
+      contactPersonName: branch?.contactPersonName ?? '',
+      contactPersonEmail: branch?.contactPersonEmail ?? '',
     };
   }
 
@@ -447,6 +455,18 @@ export class ShopFormComponent {
         locationAccuracy: this.locationAccuracy,
         placeId: this.placeId,
         locationConfirmed: this.locationConfirmed,
+        // Omitted rather than sent empty: the server reads a missing field as
+        // "leave what is there", so clearing the form never wipes a contact
+        // person somebody set on the branches screen.
+        ...(value.branchContactNumber.trim()
+          ? { contactNumber: value.branchContactNumber.trim() }
+          : {}),
+        ...(value.contactPersonName.trim()
+          ? { contactPersonName: value.contactPersonName.trim() }
+          : {}),
+        ...(value.contactPersonEmail.trim()
+          ? { contactPersonEmail: value.contactPersonEmail.trim() }
+          : {}),
         isPrimary: true,
       };
     }

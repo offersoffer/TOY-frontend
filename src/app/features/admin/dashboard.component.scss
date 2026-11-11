@@ -302,3 +302,15 @@ ul.activity li {
     gap: 0.5rem;
   }
 }
+
+/* Says what a branch admin's figures actually cover. Informational rather
+   than a warning: nothing is wrong, the numbers just mean something narrower
+   than the shop's, and only some of them are narrowed. */
+.branch-note {
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--info-bg);
+  border-left: 3px solid var(--info);
+  color: var(--text);
+  font-size: 0.9rem;
+}

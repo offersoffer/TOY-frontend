@@ -8,7 +8,7 @@ import { AuthService } from '../../core/auth.service';
 import { ToastService } from '../../core/toast.service';
 import { AiService } from '../../core/ai.service';
 import { AiOfferFacts, ContentSection } from '../../core/ai.models';
-import { Branch, Category, Offer, OfferPayload, Shop } from '../../core/models';
+import { Branch, BranchPublishBlocker, Category, Offer, OfferPayload, Shop } from '../../core/models';
 import { PERMISSIONS } from '../../core/permissions';
 import { applyServerErrors, errorFor } from '../auth/auth-shell';
 import { AiContentPanelComponent } from '../ai/ai-content-panel.component';
@@ -344,6 +344,65 @@ export class OfferFormComponent {
 
   isBranchSelected(branchId: number): boolean {
     return this.selectedBranchIds().includes(branchId);
+  }
+
+  // -------------------------------------------------------------------------
+  // The publish gate (§18)
+  // -------------------------------------------------------------------------
+
+  /**
+   * The branches this offer would actually appear at, by the same rule the
+   * server applies: every active branch for a shop-wide offer, the chosen ones
+   * for a targeted offer, and none at all for an online one - an online offer
+   * has no counter for a customer to walk into.
+   *
+   * A method and not a `computed`, deliberately. `applicabilityType` lives on
+   * the form, and a form control is not a signal, so a computed reading it
+   * never invalidates: it captured 'shop_wide' on first render and went on
+   * warning about incomplete branches after the merchant had switched the
+   * offer to Online. The template re-reads this each change-detection pass
+   * instead, which is what the control's own bindings already do.
+   */
+  private targetedBranches(): Branch[] {
+    const applicability = this.form.controls.applicabilityType.value;
+    if (applicability === 'online') return [];
+
+    // Inactive branches are never checked by the gate, because they are never
+    // offered to customers - that is the merchant's exit when they cannot
+    // complete one.
+    const active = this.branches().filter((branch) => branch.status === 'active');
+    if (applicability === 'shop_wide') return active;
+
+    const chosen = this.selectedBranchIds();
+    return active.filter((branch) => chosen.includes(branch.id));
+  }
+
+  /**
+   * Which of them are not ready, and why.
+   *
+   * Shown before the merchant presses Publish rather than only in the 422 that
+   * comes back from it. The server still decides - this is the same list it
+   * would send - but a twenty-field form is a bad place to learn that the
+   * problem is on a different screen entirely.
+   */
+  incompleteBranches(): { branch: Branch; blockers: BranchPublishBlocker[] }[] {
+    return this.targetedBranches()
+      .map((branch) => ({ branch, blockers: branch.publishBlockers ?? [] }))
+      .filter((entry) => entry.blockers.length > 0);
+  }
+
+  /**
+   * How many requirements a branch still fails, or zero for one the gate will
+   * not look at - which an inactive branch always is, whatever state its
+   * fields are in.
+   */
+  branchBlockerCount(branch: Branch): number {
+    if (branch.status !== 'active') return 0;
+    return (branch.publishBlockers ?? []).length;
+  }
+
+  missingFor(branch: Branch): string {
+    return (branch.publishBlockers ?? []).map((blocker) => blocker.label).join(', ');
   }
 
   selectAllBranches(): void {
